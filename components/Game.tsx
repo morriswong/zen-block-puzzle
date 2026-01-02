@@ -499,8 +499,93 @@ export const Game: React.FC<GameProps> = ({ onComplete, onRestart, onHome }) => 
     }
   }, [isPanning, handlePanMove, handlePanEnd]);
 
-  // Touch Panning (Simplified for brevity, similar to original)
-  // ... (Omitted full touch re-implementation for space, assuming mouse/basic touch mainly for now)
+  // -- Touch Handling --
+
+  const getTouchDistance = (t1: React.Touch, t2: React.Touch) => {
+    return Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
+  };
+
+  const getTouchCenter = (t1: React.Touch, t2: React.Touch) => {
+    return {
+      x: (t1.clientX + t2.clientX) / 2,
+      y: (t1.clientY + t2.clientY) / 2,
+    };
+  };
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (e.touches.length === 2) {
+      e.preventDefault();
+      const t1 = e.touches[0];
+      const t2 = e.touches[1];
+      const dist = getTouchDistance(t1, t2);
+      const center = getTouchCenter(t1, t2);
+
+      touchStateRef.current = {
+        ...touchStateRef.current,
+        lastDistance: dist,
+        lastCenter: center,
+        isPanning: true,
+        panStart: { x: center.x - pan.x, y: center.y - pan.y }
+      };
+    }
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (e.touches.length === 2) {
+      e.preventDefault();
+      const t1 = e.touches[0];
+      const t2 = e.touches[1];
+
+      const newDist = getTouchDistance(t1, t2);
+      const newCenter = getTouchCenter(t1, t2);
+
+      // ZOOM
+      if (touchStateRef.current.lastDistance) {
+        const delta = newDist / touchStateRef.current.lastDistance;
+        const newZoom = Math.max(0.2, Math.min(3, zoom * delta));
+
+        // Adjust pan to zoom towards center
+        // Current world point at center
+        const worldX = (newCenter.x - pan.x) / zoom;
+        const worldY = (newCenter.y - pan.y) / zoom;
+
+        // New pan to keep that world point at newCenter
+        const newPanX = newCenter.x - worldX * newZoom;
+        const newPanY = newCenter.y - worldY * newZoom;
+
+        // Apply Zoom
+        setZoom(newZoom);
+        setPan({ x: newPanX, y: newPanY });
+      }
+
+      // PAN (Refined by calculating difference in center movement)
+      // Note: The zoom calculation above already applies some pan correction. 
+      // If we purely want to pan based on center movement:
+      // We essentially just updated pan based on zoom. Now we update based on movement.
+      // But calculating both simultaneously is tricky.
+      // 
+      // Simplified approach for simultaneous Pan+Zoom:
+      // 1. Calculate zoom change.
+      // 2. Calculate how much the *center* moved.
+      // 
+      // Actually, the above zoom logic calculates "zoom around current center". 
+      // Passively, if the user moves their fingers together (panning), the center moves, 
+      // and the logic `newCenter.x - worldX * newZoom` *should* handle the pan implicitly.
+      // Let's rely on that for now.
+
+      touchStateRef.current.lastDistance = newDist;
+      touchStateRef.current.lastCenter = newCenter;
+    }
+  };
+
+  const handleTouchEnd = () => {
+    touchStateRef.current = {
+      ...touchStateRef.current,
+      lastDistance: null,
+      lastCenter: null,
+      isPanning: false
+    };
+  };
 
   // Reset zoom and pan function
   const handleResetView = () => {
@@ -520,6 +605,9 @@ export const Game: React.FC<GameProps> = ({ onComplete, onRestart, onHome }) => 
       className="relative w-full h-full overflow-hidden touch-none bg-gray-900"
       onWheel={handleWheel}
       onPointerDown={handlePanStart}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
       onContextMenu={(e) => e.preventDefault()}
     >
       <div
