@@ -95,6 +95,57 @@ export const Game: React.FC<GameProps> = ({ onComplete, onRestart, onHome }) => 
 
   // --- Initialization & Batching ---
 
+  // Helper: Fit view to show all pieces
+  const fitToView = useCallback((currentPieces: PieceState[]) => {
+    if (currentPieces.length === 0) return;
+
+    // Calculate bounds of all pieces
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+
+    currentPieces.forEach(p => {
+      const def = PIECE_DEFINITIONS.find(d => d.id === p.id);
+      const w = (def?.width || 1) * BLOCK_SIZE;
+      const h = (def?.height || 1) * BLOCK_SIZE;
+
+      minX = Math.min(minX, p.currentPos.x);
+      minY = Math.min(minY, p.currentPos.y);
+      maxX = Math.max(maxX, p.currentPos.x + w);
+      maxY = Math.max(maxY, p.currentPos.y + h);
+    });
+
+    // Add padding
+    const PADDING = 100;
+    const contentW = maxX - minX + (PADDING * 2);
+    const contentH = maxY - minY + (PADDING * 2);
+    const contentCenterX = minX + (maxX - minX) / 2;
+    const contentCenterY = minY + (maxY - minY) / 2;
+
+    // Determine target zoom
+    const viewW = window.innerWidth;
+    const viewH = window.innerHeight;
+
+    // Scale to fit nicely
+    const scaleX = viewW / contentW;
+    const scaleY = viewH / contentH;
+    let targetZoom = Math.min(scaleX, scaleY);
+
+    // Clamp zoom levels
+    targetZoom = Math.max(0.2, Math.min(2.0, targetZoom)); // Don't zoom in too much automatically
+
+    // Calculate Pan to center the content
+    // We want contentCenter to be at screen center
+    // ScreenCenter = (ViewW/2, ViewH/2)
+    // World point -> Screen: screenX = worldX * zoom + panX
+    // panX = screenX - worldX * zoom
+
+    const targetPanX = (viewW / 2) - (contentCenterX * targetZoom);
+    const targetPanY = (viewH / 2) - (contentCenterY * targetZoom);
+
+    // Animate or set directly? Setting directly for now for responsiveness
+    setZoom(targetZoom);
+    setPan({ x: targetPanX, y: targetPanY });
+  }, []);
+
   // Spawn new batch
   const spawnBatch = useCallback((batchIdx: number, currentPieces: PieceState[]) => {
     const BATCH_SIZE = 5;
@@ -107,7 +158,7 @@ export const Game: React.FC<GameProps> = ({ onComplete, onRestart, onHome }) => 
 
     const newPieces: PieceState[] = [];
 
-    // Independent bounds calculation
+    // Calculate Occupied Regions (World Space)
     const occupiedRects: { x: number; y: number; w: number; h: number }[] = currentPieces.map(p => {
       const def = PIECE_DEFINITIONS.find(d => d.id === p.id);
       return {
@@ -118,67 +169,70 @@ export const Game: React.FC<GameProps> = ({ onComplete, onRestart, onHome }) => 
       };
     });
 
-    batchDefs.forEach(def => {
+    // Determine "center" of current mess to spawn near it, but outwards
+    // If empty, use (0,0) as center
+    let centerX = 0, centerY = 0;
+    if (occupiedRects.length > 0) {
+      const bounds = occupiedRects.reduce((acc, r) => ({
+        minX: Math.min(acc.minX, r.x),
+        maxX: Math.max(acc.maxX, r.x + r.w),
+        minY: Math.min(acc.minY, r.y),
+        maxY: Math.max(acc.maxY, r.y + r.h),
+      }), { minX: Infinity, maxX: -Infinity, minY: Infinity, maxY: -Infinity });
+      centerX = (bounds.minX + bounds.maxX) / 2;
+      centerY = (bounds.minY + bounds.maxY) / 2;
+    } else {
+      // First batch: Center in "World 0,0" roughly
+      // We'll let fitToView handle centering on screen later
+      centerX = 0;
+      centerY = 0;
+    }
+
+    batchDefs.forEach((def, i) => {
+      const w = def.width * BLOCK_SIZE;
+      const h = def.height * BLOCK_SIZE;
+
+      // Simple Spiral / Radial Search
+      // Start from a radius and increase
+      let radius = (occupiedRects.length > 0) ? Math.max(500, occupiedRects.length * 50) : 100; // Start further out if crowded
+      let angle = (Math.PI * 2 * (i / batchDefs.length)) + (Math.random()); // Spread out
+
       let bestPos = { x: 0, y: 0 };
       let placed = false;
+      const MARGIN = 40; // Space between pieces
 
-      const margin = 20;
-      const viewW = window.innerWidth;
-      const viewH = window.innerHeight;
+      // Try 50 attempts with increasing radius
+      for (let attempt = 0; attempt < 50; attempt++) {
+        const testX = centerX + Math.cos(angle) * (radius + (attempt * 20)); // Spiral out
+        const testY = centerY + Math.sin(angle) * (radius + (attempt * 20));
 
-      // Safe spawn area
-      const spawnMinX = 50;
-      const spawnMaxX = viewW - (def.width * BLOCK_SIZE) - 50;
-      const spawnMinY = 50;
-      const spawnMaxY = viewH - (def.height * BLOCK_SIZE) - 50;
+        // Rotate angle slightly for next attempt
+        angle += 0.5;
 
-      if (spawnMaxX < spawnMinX || spawnMaxY < spawnMinY) {
-        bestPos = { x: viewW / 2 - 50, y: viewH / 2 - 50 };
-        placed = true;
-      } else {
-        const MAX_ATTEMPTS = 100;
-        for (let i = 0; i < MAX_ATTEMPTS; i++) {
-          const testX = spawnMinX + Math.random() * (spawnMaxX - spawnMinX);
-          const testY = spawnMinY + Math.random() * (spawnMaxY - spawnMinY);
+        const testRect = { x: testX, y: testY, w: w + MARGIN, h: h + MARGIN };
 
-          const testRect = {
-            x: testX - margin,
-            y: testY - margin,
-            w: def.width * BLOCK_SIZE + (margin * 2),
-            h: def.height * BLOCK_SIZE + (margin * 2)
-          };
+        const hasOverlap = occupiedRects.some(r => {
+          return (
+            testRect.x < r.x + r.w &&
+            testRect.x + testRect.w > r.x &&
+            testRect.y < r.y + r.h &&
+            testRect.y + testRect.h > r.y
+          );
+        });
 
-          const hasOverlap = occupiedRects.some(r => {
-            return (
-              testRect.x < r.x + r.w &&
-              testRect.x + testRect.w > r.x &&
-              testRect.y < r.y + r.h &&
-              testRect.y + testRect.h > r.y
-            );
-          });
-
-          if (!hasOverlap) {
-            bestPos = { x: testX, y: testY };
-            placed = true;
-            break;
-          }
+        if (!hasOverlap) {
+          bestPos = { x: testX, y: testY };
+          placed = true;
+          break;
         }
       }
 
       if (!placed) {
-        // Fallback: Random position
-        bestPos = {
-          x: spawnMinX + Math.random() * (spawnMaxX - spawnMinX),
-          y: spawnMinY + Math.random() * (spawnMaxY - spawnMinY)
-        };
+        // Fallback: Just put it far away
+        bestPos = { x: centerX + 1000 + (i * 200), y: centerY };
       }
 
-      occupiedRects.push({
-        x: bestPos.x,
-        y: bestPos.y,
-        w: def.width * BLOCK_SIZE,
-        h: def.height * BLOCK_SIZE
-      });
+      occupiedRects.push({ x: bestPos.x, y: bestPos.y, w, h });
 
       newPieces.push({
         id: def.id,
@@ -190,37 +244,31 @@ export const Game: React.FC<GameProps> = ({ onComplete, onRestart, onHome }) => 
       });
     });
 
-    setPieces([...currentPieces, ...newPieces]);
-  }, []);
+    const allPieces = [...currentPieces, ...newPieces];
+    setPieces(allPieces);
+
+    // Auto-fit view to show new pieces
+    // Timeout to allow state update? Not strictly needed for calculation, 
+    // but better user experience to see it happen
+    setTimeout(() => fitToView(allPieces), 50);
+
+  }, [fitToView]);
 
   // Initial Spawn
   useEffect(() => {
-    spawnBatch(0, []);
-  }, [spawnBatch]);
+    // Only spawn if empty
+    if (pieces.length === 0 && batchIndex === 0) {
+      spawnBatch(0, []);
+    }
+  }, [spawnBatch, batchIndex, pieces.length]);
 
   // Check for Batch Completion
   useEffect(() => {
     if (pieces.length === 0) return;
 
-    // Condition: All visible pieces belong to the same group
-    // OR: All pieces from the *current batch* are connected to the main structure.
-    // Simplest user-friendly check: Are there fewer groups than (TotalPieces - 4)? 
-    // Wait, the prompt says "managed to stick together 5 puzzles" -> show next 5.
-    // Let's go with: "Active Group Count" <= "Previous Group Count" - 4 ?? No.
-
-    // Better Logic:
-    // Count unique group IDs.
     const uniqueGroups = new Set(pieces.map(p => p.groupId));
 
-    // If we have just 1 big group, definitely spawn more.
-    // But maybe user has 2 chunks.
-    // Let's assume user starts with 5 pieces (5 groups).
-    // They connect 2 -> 4 groups.
-    // They connect all 5 -> 1 group.
-
-    // So if (uniqueGroups.size === 1) AND (pieces.length < PIECE_DEFINITIONS.length), spawn next batch.
     if (uniqueGroups.size === 1 && pieces.length < PIECE_DEFINITIONS.length) {
-      // Delay slightly for effect
       const timer = setTimeout(() => {
         setBatchIndex(prev => {
           const next = prev + 1;
@@ -233,7 +281,6 @@ export const Game: React.FC<GameProps> = ({ onComplete, onRestart, onHome }) => 
 
     // Win Condition
     if (uniqueGroups.size === 1 && pieces.length === PIECE_DEFINITIONS.length) {
-      // Game Complete
       const timer = setTimeout(() => {
         onComplete(imageUrl);
       }, 1000);
@@ -245,143 +292,167 @@ export const Game: React.FC<GameProps> = ({ onComplete, onRestart, onHome }) => 
 
   // --- Event Handling ---
 
-  // START DRAG
-  const handlePointerDown = (e: React.PointerEvent, id: number) => {
-    if (e.button === 2 || e.button === 1 || e.shiftKey) return; // Allow pan
-
-    const piece = pieces.find(p => p.id === id);
-    if (!piece) return;
-
-    // Bring group to front
-    // We only bump zIndex for visual clarity
-    setPieces(prev => prev.map(p => ({
-      ...p,
-      zIndex: p.groupId === piece.groupId ? 100 : (p.zIndex > 50 ? 50 : p.zIndex)
-    })));
-
+  // START POINTER (Mouse/Touch Down)
+  const handlePointerDown = (e: React.PointerEvent) => {
+    // Check if we clicked a piece
     const rect = containerRef.current?.getBoundingClientRect();
     if (!rect) return;
-    const containerX = (e.clientX - rect.left - pan.x) / zoom;
-    const containerY = (e.clientY - rect.top - pan.y) / zoom;
 
-    // Calculate offsets for all group members relative to the clicked piece
-    const groupOffsets = new Map<number, { dx: number, dy: number }>();
-    pieces.filter(p => p.groupId === piece.groupId).forEach(p => {
-      groupOffsets.set(p.id, {
-        dx: p.currentPos.x - piece.currentPos.x,
-        dy: p.currentPos.y - piece.currentPos.y
-      });
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
+
+    // Transform to world coordinates
+    const worldX = (mouseX - pan.x) / zoom;
+    const worldY = (mouseY - pan.y) / zoom;
+
+    // Find clicked piece (highest z-index first)
+    // We reverse the array to search from top (last drawn) to bottom
+    const clickedPiece = [...pieces].reverse().find(p => {
+      const def = PIECE_DEFINITIONS.find(d => d.id === p.id);
+      if (!def) return false;
+
+      return (
+        worldX >= p.currentPos.x &&
+        worldX <= p.currentPos.x + (def.width * BLOCK_SIZE) &&
+        worldY >= p.currentPos.y &&
+        worldY <= p.currentPos.y + (def.height * BLOCK_SIZE)
+      );
     });
 
-    dragRef.current = {
-      activeId: id,
-      startPos: { ...piece.currentPos },
-      groupOffsets,
-      mouseStart: { x: containerX, y: containerY },
-    };
+    if (clickedPiece) {
+      // DRAG PIECE
+      if (e.button === 2 || e.button === 1 || e.shiftKey) return; // Optional: Ignore right click on pieces if we want
+
+      e.preventDefault();
+      e.stopPropagation();
+
+      const id = clickedPiece.id;
+
+      // Bring group to front
+      setPieces(prev => prev.map(p => ({
+        ...p,
+        zIndex: p.groupId === clickedPiece.groupId ? 100 : (p.zIndex > 50 ? 50 : p.zIndex)
+      })));
+
+      // Calculate offsets
+      const groupOffsets = new Map<number, { dx: number, dy: number }>();
+      pieces.filter(p => p.groupId === clickedPiece.groupId).forEach(p => {
+        groupOffsets.set(p.id, {
+          dx: p.currentPos.x - clickedPiece.currentPos.x,
+          dy: p.currentPos.y - clickedPiece.currentPos.y
+        });
+      });
+
+      dragRef.current = {
+        activeId: id,
+        startPos: { ...clickedPiece.currentPos },
+        groupOffsets,
+        mouseStart: { x: worldX, y: worldY }, // Store WORLD pos for easier delta calc
+      };
+
+    } else {
+      // PAN BACKGROUND
+      // Allow left click (button 0) to pan if not on a piece
+      if (e.button === 0 || e.button === 1) { // Left or Middle
+        e.preventDefault();
+        setIsPanning(true);
+        panStartRef.current = { x: e.clientX - pan.x, y: e.clientY - pan.y };
+      }
+    }
   };
 
   // DRAG MOVE
   const handlePointerMove = useCallback((e: PointerEvent) => {
-    // Panning overrides dragging
-    if (isPanning || touchStateRef.current.isPanning) return;
+    // Handle Panning (if active)
+    if (isPanning) {
+      e.preventDefault();
+      setPan({
+        x: e.clientX - panStartRef.current.x,
+        y: e.clientY - panStartRef.current.y,
+      });
+      return;
+    }
+
+    if (touchStateRef.current.isPanning) return; // Touch pan handled separately
 
     const { activeId, startPos, mouseStart, groupOffsets } = dragRef.current;
+    if (!activeId) return;
 
-    // Check mismatch line logic during drag
-    if (activeId) {
-      const rect = containerRef.current?.getBoundingClientRect();
-      if (!rect) return;
+    const rect = containerRef.current?.getBoundingClientRect();
+    if (!rect) return;
 
-      const containerX = (e.clientX - rect.left - pan.x) / zoom;
-      const containerY = (e.clientY - rect.top - pan.y) / zoom;
-      const deltaX = containerX - mouseStart.x;
-      const deltaY = containerY - mouseStart.y;
+    // Current World Pos
+    const currentWorldX = (e.clientX - rect.left - pan.x) / zoom;
+    const currentWorldY = (e.clientY - rect.top - pan.y) / zoom;
 
-      // Proposed new pos for the *primary dragged piece*
-      const newMainPos = { x: startPos.x + deltaX, y: startPos.y + deltaY };
+    const deltaX = currentWorldX - mouseStart.x;
+    const deltaY = currentWorldY - mouseStart.y;
 
-      // Update ALL group members
-      const updatedPieces = pieces.map(p => {
-        // Is this piece part of the dragged group?
-        if (p.groupId === pieces.find(x => x.id === activeId)?.groupId) {
-          // Find offset
-          const offset = groupOffsets.get(p.id) || { dx: 0, dy: 0 };
-          return {
-            ...p,
-            currentPos: {
-              x: newMainPos.x + offset.dx,
-              y: newMainPos.y + offset.dy
-            }
-          };
-        }
-        return p;
-      });
+    // Proposed new pos for the *primary dragged piece*
+    const newMainPos = { x: startPos.x + deltaX, y: startPos.y + deltaY };
 
-      setPieces(updatedPieces);
+    // Update ALL group members
+    const updatedPieces = pieces.map(p => {
+      if (p.groupId === pieces.find(x => x.id === activeId)?.groupId) {
+        const offset = groupOffsets.get(p.id) || { dx: 0, dy: 0 };
+        return {
+          ...p,
+          currentPos: {
+            x: newMainPos.x + offset.dx,
+            y: newMainPos.y + offset.dy
+          }
+        };
+      }
+      return p;
+    });
 
-      // Check for mismatch visual
-      // Check "near but wrong" for the active group against all other groups
-      let bestWrongMatch: { p1: Point, p2: Point } | null = null;
+    setPieces(updatedPieces);
 
-      const draggedGroup = pieces.filter(p => p.id === activeId || groupOffsets.has(p.id));
-      const otherPieces = pieces.filter(p => !groupOffsets.has(p.id) && p.id !== activeId);
+    // ... Mismatch logic (same as before) ...
+    let bestWrongMatch: { p1: Point, p2: Point } | null = null;
+    const draggedGroup = pieces.filter(p => p.id === activeId || groupOffsets.has(p.id));
+    const otherPieces = pieces.filter(p => !groupOffsets.has(p.id) && p.id !== activeId);
 
-      // Simple check: Just check the piece under cursor vs others? 
-      // Or check all boundary pieces of the group?
-      // Let's just check the specific piece being dragged for simplicity first
-      const activePiece = updatedPieces.find(p => p.id === activeId);
-      if (activePiece) {
-        for (const other of otherPieces) {
-          // Dist check
-          const dist = Math.hypot(
-            activePiece.currentPos.x - other.currentPos.x,
-            activePiece.currentPos.y - other.currentPos.y
-          );
-
-          // If close enough to be confusing (< 80) but NOT a neighbor match
-          if (dist < 150) {
-            // Check if they are valid neighbors
-            if (!areNeighbors(activePiece, other)) {
-              // Show red line between centers
-              // Or centers + size/2
-              const defA = PIECE_DEFINITIONS.find(d => d.id === activePiece.id)!;
-              const defB = PIECE_DEFINITIONS.find(d => d.id === other.id)!;
-
-              const centerA = {
-                x: activePiece.currentPos.x + (defA.width * BLOCK_SIZE) / 2,
-                y: activePiece.currentPos.y + (defA.height * BLOCK_SIZE) / 2
-              };
-              const centerB = {
-                x: other.currentPos.x + (defB.width * BLOCK_SIZE) / 2,
-                y: other.currentPos.y + (defB.height * BLOCK_SIZE) / 2
-              };
-
-              bestWrongMatch = { p1: centerA, p2: centerB };
-              break; // Just show one at a time
-            }
+    const activePiece = updatedPieces.find(p => p.id === activeId);
+    if (activePiece) {
+      for (const other of otherPieces) {
+        const dist = Math.hypot(
+          activePiece.currentPos.x - other.currentPos.x,
+          activePiece.currentPos.y - other.currentPos.y
+        );
+        if (dist < 150) {
+          if (!areNeighbors(activePiece, other)) {
+            const defA = PIECE_DEFINITIONS.find(d => d.id === activePiece.id)!;
+            const defB = PIECE_DEFINITIONS.find(d => d.id === other.id)!;
+            const centerA = {
+              x: activePiece.currentPos.x + (defA.width * BLOCK_SIZE) / 2,
+              y: activePiece.currentPos.y + (defA.height * BLOCK_SIZE) / 2
+            };
+            const centerB = {
+              x: other.currentPos.x + (defB.width * BLOCK_SIZE) / 2,
+              y: other.currentPos.y + (defB.height * BLOCK_SIZE) / 2
+            };
+            bestWrongMatch = { p1: centerA, p2: centerB };
+            break;
           }
         }
       }
-      setMismatchLine(bestWrongMatch);
-
     }
+    setMismatchLine(bestWrongMatch);
+
   }, [pan, zoom, isPanning, pieces]);
 
-  // DROP / SNAP
+
+  // DROP / SNAP (Same as before largely, just clean up)
   const handlePointerUp = useCallback(() => {
+    setIsPanning(false); // Stop panning if we were panning
+
     const { activeId } = dragRef.current;
     if (!activeId) return;
 
-    setMismatchLine(null); // Clear red line
-
-    // Attempt Snap
-    // We check if ANY piece in the dragged group is close to ANY piece in another group
-    // If so, and it matches, we align the whole group.
+    setMismatchLine(null);
 
     let merged = false;
-
-    // Clone for mutation
     let nextPieces = [...pieces];
     const draggedPiece = nextPieces.find(p => p.id === activeId);
     if (!draggedPiece) return;
@@ -390,19 +461,14 @@ export const Game: React.FC<GameProps> = ({ onComplete, onRestart, onHome }) => 
     const sourceGroupPieces = nextPieces.filter(p => p.groupId === sourceGroupId);
     const targetGroupPieces = nextPieces.filter(p => p.groupId !== sourceGroupId);
 
-    // Find best snap candidate
     for (const sPiece of sourceGroupPieces) {
       if (merged) break;
       for (const tPiece of targetGroupPieces) {
         if (areNeighbors(sPiece, tPiece)) {
-          // MATCH FOUND!
-          // 1. Calculate required adjustment to align sPiece to tPiece
           const idealPos = getExpectedPosition(tPiece, sPiece.id);
           if (idealPos) {
             const adjustX = idealPos.x - sPiece.currentPos.x;
             const adjustY = idealPos.y - sPiece.currentPos.y;
-
-            // 2. Apply adjustment to ALL pieces in source group
             nextPieces = nextPieces.map(p => {
               if (p.groupId === sourceGroupId) {
                 return {
@@ -411,13 +477,12 @@ export const Game: React.FC<GameProps> = ({ onComplete, onRestart, onHome }) => 
                     x: p.currentPos.x + adjustX,
                     y: p.currentPos.y + adjustY
                   },
-                  groupId: tPiece.groupId, // MERGE GROUPS
-                  zIndex: 10 // Reset Z
+                  groupId: tPiece.groupId, // MERGE
+                  zIndex: 10
                 };
               }
               return p;
             });
-
             merged = true;
             break;
           }
@@ -428,13 +493,11 @@ export const Game: React.FC<GameProps> = ({ onComplete, onRestart, onHome }) => 
     if (merged) {
       setPieces(nextPieces);
     } else {
-      // Just release, zIndex reset
       setPieces(prev => prev.map(p => p.groupId === sourceGroupId ? { ...p, zIndex: 10 } : p));
     }
 
     dragRef.current.activeId = null;
     dragRef.current.groupOffsets.clear();
-
   }, [pieces]);
 
 
@@ -469,35 +532,6 @@ export const Game: React.FC<GameProps> = ({ onComplete, onRestart, onHome }) => 
     }
   }, [zoom, pan]);
 
-  // Panning
-  const handlePanStart = (e: React.PointerEvent | React.MouseEvent) => {
-    if (e.button === 2 || e.button === 1 || (e.button === 0 && e.shiftKey)) {
-      e.preventDefault();
-      setIsPanning(true);
-      panStartRef.current = { x: e.clientX - pan.x, y: e.clientY - pan.y };
-    }
-  };
-  const handlePanMove = useCallback((e: PointerEvent | MouseEvent) => {
-    if (!isPanning) return;
-    e.preventDefault();
-    setPan({
-      x: e.clientX - panStartRef.current.x,
-      y: e.clientY - panStartRef.current.y,
-    });
-  }, [isPanning]);
-
-  const handlePanEnd = useCallback(() => setIsPanning(false), []);
-
-  useEffect(() => {
-    if (isPanning) {
-      window.addEventListener('pointermove', handlePanMove);
-      window.addEventListener('pointerup', handlePanEnd);
-      return () => {
-        window.removeEventListener('pointermove', handlePanMove);
-        window.removeEventListener('pointerup', handlePanEnd);
-      };
-    }
-  }, [isPanning, handlePanMove, handlePanEnd]);
 
   // -- Touch Handling --
 
@@ -604,7 +638,7 @@ export const Game: React.FC<GameProps> = ({ onComplete, onRestart, onHome }) => 
       ref={containerRef}
       className="relative w-full h-full overflow-hidden touch-none bg-gray-900"
       onWheel={handleWheel}
-      onPointerDown={handlePanStart}
+      onPointerDown={handlePointerDown}
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
@@ -625,7 +659,6 @@ export const Game: React.FC<GameProps> = ({ onComplete, onRestart, onHome }) => 
             definition={PIECE_DEFINITIONS.find(d => d.id === piece.id)!}
             state={piece}
             imageUrl={imageUrl}
-            onMouseDown={handlePointerDown}
           />
         ))}
 

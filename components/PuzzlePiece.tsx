@@ -6,10 +6,9 @@ interface PuzzlePieceProps {
   definition: PieceDef;
   state: PieceState;
   imageUrl: string;
-  onMouseDown: (e: React.PointerEvent, id: number) => void;
 }
 
-export const PuzzlePiece: React.FC<PuzzlePieceProps> = ({ definition, state, imageUrl, onMouseDown }) => {
+export const PuzzlePiece: React.FC<PuzzlePieceProps> = ({ definition, state, imageUrl }) => {
   const { currentPos, zIndex } = state;
 
   return (
@@ -24,7 +23,6 @@ export const PuzzlePiece: React.FC<PuzzlePieceProps> = ({ definition, state, ima
         pointerEvents: 'auto',
         transition: 'none',
       }}
-      onPointerDown={(e) => onMouseDown(e, definition.id)}
     >
       {definition.blocks.map((block, index) => {
         const bgX = -1 * (definition.origin.x + block.x) * BLOCK_SIZE;
