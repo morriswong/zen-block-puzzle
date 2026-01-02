@@ -57,6 +57,7 @@ export const Game: React.FC<GameProps> = ({ onComplete, onRestart, onHome }) => 
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
   const [isPanning, setIsPanning] = useState(false);
+  const [isAnimating, setIsAnimating] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false); // Menu State
 
   const containerRef = useRef<HTMLDivElement>(null);
@@ -141,9 +142,15 @@ export const Game: React.FC<GameProps> = ({ onComplete, onRestart, onHome }) => 
     const targetPanX = (viewW / 2) - (contentCenterX * targetZoom);
     const targetPanY = (viewH / 2) - (contentCenterY * targetZoom);
 
-    // Animate or set directly? Setting directly for now for responsiveness
+    // Animate
+    setIsAnimating(true);
     setZoom(targetZoom);
     setPan({ x: targetPanX, y: targetPanY });
+
+    // Reset animation flag after transition
+    setTimeout(() => {
+      setIsAnimating(false);
+    }, 600);
   }, []);
 
   // Spawn new batch
@@ -659,6 +666,7 @@ export const Game: React.FC<GameProps> = ({ onComplete, onRestart, onHome }) => 
       <div
         style={{
           transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
+          transition: isAnimating ? 'transform 0.6s cubic-bezier(0.25, 0.8, 0.25, 1)' : 'none',
           transformOrigin: '0 0',
           width: '100%',
           height: '100%',
