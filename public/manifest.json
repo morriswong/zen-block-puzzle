@@ -1,0 +1,17 @@
+{
+  "name": "Zen Block Puzzle",
+  "short_name": "Zen Block",
+  "description": "A minimal, relaxing block jigsaw puzzle game with simple mechanics and no distractions.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#111827",
+  "theme_color": "#2dd4bf",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
