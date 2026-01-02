@@ -140,11 +140,8 @@ export const Game: React.FC<GameProps> = ({ onComplete, onRestart, onHome }) => 
         )}
       </div>
 
-      {/* Game HUD */}
-      <GameHUD progress={progress} showProgressBar={false} />
-
       {/* Top Bar */}
-      <div className="absolute top-0 left-0 w-full p-4 flex justify-between items-start pointer-events-none z-50">
+      <div className="absolute top-0 left-0 w-full p-4 flex justify-between items-center pointer-events-none z-50">
         {/* Home Button (Top Left) */}
         <button
           onClick={onHome}
@@ -156,6 +153,9 @@ export const Game: React.FC<GameProps> = ({ onComplete, onRestart, onHome }) => 
             <polyline points="9 22 9 12 15 12 15 22" />
           </svg>
         </button>
+
+        {/* Game HUD (Center) */}
+        <GameHUD progress={progress} showProgressBar={false} />
 
         {/* Menu Button (Top Right) */}
         <button
