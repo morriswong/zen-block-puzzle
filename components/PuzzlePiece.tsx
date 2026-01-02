@@ -14,7 +14,7 @@ export const PuzzlePiece: React.FC<PuzzlePieceProps> = ({ definition, state, ima
   return (
     <div
       data-piece="true"
-      className="absolute select-none touch-none cursor-grab active:cursor-grabbing"
+      className="absolute select-none touch-none cursor-grab active:cursor-grabbing drop-shadow-lg"
       style={{
         transform: `translate(${currentPos.x}px, ${currentPos.y}px)`,
         width: definition.width * BLOCK_SIZE,

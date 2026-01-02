@@ -636,7 +636,7 @@ export const Game: React.FC<GameProps> = ({ onComplete, onRestart, onHome }) => 
   return (
     <div
       ref={containerRef}
-      className="relative w-full h-full overflow-hidden touch-none bg-gray-900"
+      className="relative w-full h-full overflow-hidden touch-none bg-black"
       onWheel={handleWheel}
       onPointerDown={handlePointerDown}
       onTouchStart={handleTouchStart}
@@ -644,6 +644,18 @@ export const Game: React.FC<GameProps> = ({ onComplete, onRestart, onHome }) => 
       onTouchEnd={handleTouchEnd}
       onContextMenu={(e) => e.preventDefault()}
     >
+      {/* Frosted Glass Background */}
+      <div
+        className="absolute inset-0 pointer-events-none z-0"
+        style={{
+          backgroundImage: `url(${imageUrl})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          opacity: 0.6
+        }}
+      />
+      <div className="absolute inset-0 pointer-events-none z-0 backdrop-blur-3xl bg-black/60" />
+
       <div
         style={{
           transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
