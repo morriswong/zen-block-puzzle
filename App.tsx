@@ -10,7 +10,7 @@ const App: React.FC = () => {
   const [screen, setScreen] = useState<ScreenState>('start');
   const [gameKey, setGameKey] = useState(0); // Key to force new image on restart
   const [completedImageUrl, setCompletedImageUrl] = useState<string>('');
-  const [imageOptions, setImageOptions] = useState<ImageOptions>({}); // Image selection settings
+  const [imageOptions, setImageOptions] = useState<ImageOptions>({ useCurated: true }); // Image selection settings
 
   const handleNewGame = () => {
     setGameKey(prev => prev + 1); // Increment key to force new image

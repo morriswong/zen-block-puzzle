@@ -9,18 +9,27 @@ export const SNAP_THRESHOLD = 50;
 
 // Image Source - Random image with cache-busting
 export interface ImageOptions {
-  id?: number;          // Specific Picsum image ID
+  useCurated?: boolean; // Use curated image pool (recommended)
   grayscale?: boolean;  // Apply grayscale filter
   blur?: number;        // Blur amount (1-10)
 }
 
-export const getImageUrl = (options: ImageOptions = {}): string => {
-  const { id, grayscale, blur } = options;
+// Curated list of Picsum image IDs that work well for puzzles
+const CURATED_IMAGE_IDS = [237, 1015, 1018, 1025, 180, 1043, 367, 1074, 292, 659];
 
-  // Use specific image ID or random
-  const baseUrl = id
-    ? `https://picsum.photos/id/${id}/800`
-    : `https://picsum.photos/800?random=${Date.now()}`;
+export const getImageUrl = (options: ImageOptions = {}): string => {
+  const { useCurated = true, grayscale, blur } = options;
+
+  // Select image source
+  let baseUrl: string;
+  if (useCurated) {
+    // Pick a random image from curated pool
+    const randomId = CURATED_IMAGE_IDS[Math.floor(Math.random() * CURATED_IMAGE_IDS.length)];
+    baseUrl = `https://picsum.photos/id/${randomId}/800`;
+  } else {
+    // Completely random image
+    baseUrl = `https://picsum.photos/800?random=${Date.now()}`;
+  }
 
   // Build query parameters
   const params: string[] = [];
@@ -29,7 +38,7 @@ export const getImageUrl = (options: ImageOptions = {}): string => {
 
   // Append parameters
   if (params.length > 0) {
-    const separator = id ? '?' : '&';
+    const separator = useCurated ? '?' : '&';
     return `${baseUrl}${separator}${params.join('&')}`;
   }
 
