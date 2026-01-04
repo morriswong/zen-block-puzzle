@@ -1,5 +1,5 @@
 import React, { useRef, useMemo } from 'react';
-import { PIECE_DEFINITIONS, getImageUrl } from '../constants';
+import { PIECE_DEFINITIONS, getImageUrl, ImageOptions } from '../constants';
 import { PuzzlePiece } from './PuzzlePiece';
 import { GameHUD } from './GameHUD';
 import { GameMenu } from './GameMenu';
@@ -12,10 +12,11 @@ interface GameProps {
   onComplete: (imageUrl: string) => void;
   onRestart: () => void;
   onHome: () => void;
+  imageOptions?: ImageOptions;
 }
 
-export const Game: React.FC<GameProps> = ({ onComplete, onRestart, onHome }) => {
-  const imageUrl = useMemo(() => getImageUrl(), []);
+export const Game: React.FC<GameProps> = ({ onComplete, onRestart, onHome, imageOptions = {} }) => {
+  const imageUrl = useMemo(() => getImageUrl(imageOptions), [imageOptions]);
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Viewport transform (pan/zoom)

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { StartScreen } from './components/StartScreen';
 import { Game } from './components/Game';
 import { EndScreen } from './components/EndScreen';
+import { ImageOptions } from './constants';
 
 type ScreenState = 'start' | 'game' | 'end';
 
@@ -9,6 +10,7 @@ const App: React.FC = () => {
   const [screen, setScreen] = useState<ScreenState>('start');
   const [gameKey, setGameKey] = useState(0); // Key to force new image on restart
   const [completedImageUrl, setCompletedImageUrl] = useState<string>('');
+  const [imageOptions, setImageOptions] = useState<ImageOptions>({}); // Image selection settings
 
   const handleNewGame = () => {
     setGameKey(prev => prev + 1); // Increment key to force new image
@@ -25,11 +27,21 @@ const App: React.FC = () => {
 
       {/* Screen Routing */}
       {screen === 'start' && (
-        <StartScreen onStart={() => setScreen('game')} />
+        <StartScreen
+          onStart={() => setScreen('game')}
+          imageOptions={imageOptions}
+          onImageOptionsChange={setImageOptions}
+        />
       )}
 
       {screen === 'game' && (
-        <Game key={gameKey} onComplete={handleGameComplete} onRestart={handleNewGame} onHome={() => setScreen('start')} />
+        <Game
+          key={gameKey}
+          onComplete={handleGameComplete}
+          onRestart={handleNewGame}
+          onHome={() => setScreen('start')}
+          imageOptions={imageOptions}
+        />
       )}
 
       {screen === 'end' && (

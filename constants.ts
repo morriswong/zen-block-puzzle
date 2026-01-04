@@ -8,9 +8,32 @@ export const BLOCK_SIZE = IMAGE_SIZE / GRID_COLS; // 100px
 export const SNAP_THRESHOLD = 50;
 
 // Image Source - Random image with cache-busting
-export const getImageUrl = (): string => {
-  // Add cache-busting parameter to ensure new image loads
-  return `https://picsum.photos/800?random=${Date.now()}`;
+export interface ImageOptions {
+  id?: number;          // Specific Picsum image ID
+  grayscale?: boolean;  // Apply grayscale filter
+  blur?: number;        // Blur amount (1-10)
+}
+
+export const getImageUrl = (options: ImageOptions = {}): string => {
+  const { id, grayscale, blur } = options;
+
+  // Use specific image ID or random
+  const baseUrl = id
+    ? `https://picsum.photos/id/${id}/800`
+    : `https://picsum.photos/800?random=${Date.now()}`;
+
+  // Build query parameters
+  const params: string[] = [];
+  if (grayscale) params.push('grayscale');
+  if (blur) params.push(`blur=${Math.max(1, Math.min(10, blur))}`);
+
+  // Append parameters
+  if (params.length > 0) {
+    const separator = id ? '?' : '&';
+    return `${baseUrl}${separator}${params.join('&')}`;
+  }
+
+  return baseUrl;
 };
 
 // For backward compatibility, export a function that generates URL

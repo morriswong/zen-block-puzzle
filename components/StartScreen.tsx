@@ -1,18 +1,21 @@
 import React from 'react';
-import { getImageUrl } from '../constants';
+import { getImageUrl, ImageOptions } from '../constants';
+import { ImageSelector } from './ImageSelector';
 
 interface StartScreenProps {
   onStart: () => void;
+  imageOptions: ImageOptions;
+  onImageOptionsChange: (options: ImageOptions) => void;
 }
 
-export const StartScreen: React.FC<StartScreenProps> = ({ onStart }) => {
+export const StartScreen: React.FC<StartScreenProps> = ({ onStart, imageOptions, onImageOptionsChange }) => {
   return (
     <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-900 z-50 animate-in fade-in duration-700">
       {/* Background Ambience */}
-      <div 
+      <div
         className="absolute inset-0 opacity-20 pointer-events-none blur-3xl scale-110"
         style={{
-          backgroundImage: `url(${getImageUrl()})`,
+          backgroundImage: `url(${getImageUrl(imageOptions)})`,
           backgroundPosition: 'center',
           backgroundSize: 'cover',
         }}
@@ -23,10 +26,18 @@ export const StartScreen: React.FC<StartScreenProps> = ({ onStart }) => {
           Zen<span className="font-bold text-emerald-400">Block</span>
         </h1>
         
-        <p className="text-gray-300 text-lg mb-12 font-light leading-relaxed">
+        <p className="text-gray-300 text-lg mb-8 font-light leading-relaxed">
           Restore the image. <br/>
           Find peace in the pieces.
         </p>
+
+        {/* Image Selection */}
+        <div className="mb-8 flex justify-center">
+          <ImageSelector
+            currentOptions={imageOptions}
+            onSelect={onImageOptionsChange}
+          />
+        </div>
 
         <button
           onClick={onStart}
