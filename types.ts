@@ -1,26 +1,11 @@
-export interface Point {
-  x: number;
-  y: number;
-}
+// 8-Puzzle Types
 
-export interface BlockDef {
-  col: number; // 0-3
-  row: number; // 0-3
-}
+// Board state: array of 9 tile values (0-7 are image tiles, 8 is empty)
+// Index represents position: [0,1,2] = top row, [3,4,5] = middle, [6,7,8] = bottom
+export type BoardState = number[];
 
-export interface PieceDef {
-  id: number;
-  origin: Point; // Grid coordinates (col, row) of the top-left-most block relative to the grid
-  blocks: Point[]; // Relative coordinates (x, y) from the piece origin
-  width: number; // Width in blocks
-  height: number; // Height in blocks
-}
-
-export interface PieceState {
-  id: number;
-  currentPos: Point; // Current pixel position on screen (top-left of bounding box)
-  targetPos: Point; // Target pixel position on screen (snap target)
-  isLocked: boolean;
-  zIndex: number;
-  groupId: number; // ID of the group this piece belongs to
+// Game progress
+export interface GameProgress {
+  moves: number;
+  isSolved: boolean;
 }

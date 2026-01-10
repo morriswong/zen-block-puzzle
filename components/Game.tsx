@@ -1,12 +1,9 @@
-import React, { useRef, useMemo } from 'react';
-import { PIECE_DEFINITIONS, getImageUrl } from '../constants';
-import { PuzzlePiece } from './PuzzlePiece';
-import { GameHUD } from './GameHUD';
+import React, { useMemo } from 'react';
+import { getImageUrl, IMAGE_SIZE, GRID_SIZE, EMPTY_TILE } from '../constants';
+import { Tile } from './Tile';
 import { GameMenu } from './GameMenu';
 import { useGameMenu } from '../hooks/useGameMenu';
-import { useGamePieces } from '../hooks/useGamePieces';
-import { useViewportTransform } from '../hooks/useViewportTransform';
-import { usePieceInteraction } from '../hooks/usePieceInteraction';
+import { useSlidingPuzzle } from '../hooks/useSlidingPuzzle';
 
 interface GameProps {
   onComplete: (imageUrl: string) => void;
@@ -14,83 +11,45 @@ interface GameProps {
   onHome: () => void;
 }
 
+// Check if a position is adjacent to the empty tile
+const isAdjacentToEmpty = (board: number[], position: number): boolean => {
+  const emptyPos = board.indexOf(EMPTY_TILE);
+  const emptyRow = Math.floor(emptyPos / GRID_SIZE);
+  const emptyCol = emptyPos % GRID_SIZE;
+  const tileRow = Math.floor(position / GRID_SIZE);
+  const tileCol = position % GRID_SIZE;
+
+  const rowDiff = Math.abs(emptyRow - tileRow);
+  const colDiff = Math.abs(emptyCol - tileCol);
+
+  return (rowDiff === 1 && colDiff === 0) || (rowDiff === 0 && colDiff === 1);
+};
+
 export const Game: React.FC<GameProps> = ({ onComplete, onRestart, onHome }) => {
   const imageUrl = useMemo(() => getImageUrl(), []);
-  const containerRef = useRef<HTMLDivElement>(null);
 
-  // Viewport transform (pan/zoom)
-  const {
-    pan,
-    setPan,
-    zoom,
-    isPanning,
-    setIsPanning,
-    isAnimating,
-    fitToView,
-    handleWheel,
-    handleTouchStart,
-    handleTouchMove,
-    handleTouchEnd,
-    resetView,
-    panStartRef,
-    touchStateRef
-  } = useViewportTransform({ pieceDefinitions: PIECE_DEFINITIONS });
-
-  // Game pieces state
-  const {
-    pieces,
-    setPieces,
-    progress
-  } = useGamePieces({
-    pieceDefinitions: PIECE_DEFINITIONS,
+  // Sliding puzzle logic
+  const { board, progress, moveTile, shuffle } = useSlidingPuzzle({
     onComplete,
     imageUrl,
-    fitToView
-  });
-
-  // Piece interaction (drag/drop/snap)
-  const {
-    mismatchLine,
-    handlePointerDown
-  } = usePieceInteraction({
-    pieces,
-    setPieces,
-    pieceDefinitions: PIECE_DEFINITIONS,
-    pan,
-    setPan,
-    zoom,
-    isPanning,
-    setIsPanning,
-    panStartRef,
-    touchStateRef
   });
 
   // Menu state
   const { isMenuOpen, openMenu, closeMenu } = useGameMenu();
 
   // Handle menu actions
-  const handleResetView = () => {
-    resetView();
+  const handleNewGameClick = () => {
+    shuffle();
     closeMenu();
   };
 
-  const handleNewGameClick = () => {
+  const handleNewGame = () => {
     onRestart();
     closeMenu();
   };
 
   return (
-    <div
-      ref={containerRef}
-      data-game-container
-      className="relative w-full h-full overflow-hidden touch-none bg-black"
-      onWheel={handleWheel}
-      onPointerDown={(e) => handlePointerDown(e, containerRef)}
-      onTouchStart={handleTouchStart}
-      onTouchMove={handleTouchMove}
-      onTouchEnd={handleTouchEnd}
-      onContextMenu={(e) => e.preventDefault()}
-    >
+    <div className="relative w-full h-full overflow-hidden bg-black flex flex-col">
       {/* Frosted Glass Background */}
       <div
         className="absolute inset-0 pointer-events-none z-0"
@@ -98,54 +57,17 @@ export const Game: React.FC<GameProps> = ({ onComplete, onRestart, onHome }) => 
           backgroundImage: `url(${imageUrl})`,
           backgroundSize: 'cover',
           backgroundPosition: 'center',
-          opacity: 0.6
+          opacity: 0.4,
         }}
       />
       <div className="absolute inset-0 pointer-events-none z-0 backdrop-blur-3xl bg-black/60" />
 
-      {/* Viewport Transform Container */}
-      <div
-        style={{
-          transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
-          transition: isAnimating ? 'transform 0.6s cubic-bezier(0.25, 0.8, 0.25, 1)' : 'none',
-          transformOrigin: '0 0',
-          width: '100%',
-          height: '100%',
-        }}
-      >
-        {/* Pieces */}
-        {pieces.map(piece => (
-          <PuzzlePiece
-            key={piece.id}
-            definition={PIECE_DEFINITIONS.find(d => d.id === piece.id)!}
-            state={piece}
-            imageUrl={imageUrl}
-          />
-        ))}
-
-        {/* Mismatch Red Line */}
-        {mismatchLine && (
-          <svg className="absolute top-0 left-0 w-full h-full pointer-events-none" style={{ overflow: 'visible' }}>
-            <line
-              x1={mismatchLine.p1.x}
-              y1={mismatchLine.p1.y}
-              x2={mismatchLine.p2.x}
-              y2={mismatchLine.p2.y}
-              stroke="red"
-              strokeWidth="4"
-              strokeLinecap="round"
-              strokeDasharray="10,5"
-            />
-          </svg>
-        )}
-      </div>
-
       {/* Top Bar */}
-      <div className="absolute top-0 left-0 w-full p-4 flex justify-between items-center pointer-events-none z-50">
-        {/* Home Button (Top Left) */}
+      <div className="relative z-50 p-4 flex justify-between items-center">
+        {/* Home Button */}
         <button
           onClick={onHome}
-          className="pointer-events-auto w-12 h-12 bg-black/40 hover:bg-black/60 backdrop-blur-md rounded-full flex items-center justify-center text-white transition-colors"
+          className="w-12 h-12 bg-black/40 hover:bg-black/60 backdrop-blur-md rounded-full flex items-center justify-center text-white transition-colors"
           title="Home"
         >
           <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -154,13 +76,15 @@ export const Game: React.FC<GameProps> = ({ onComplete, onRestart, onHome }) => 
           </svg>
         </button>
 
-        {/* Game HUD (Center) */}
-        <GameHUD progress={progress} showProgressBar={false} />
+        {/* Moves Counter */}
+        <div className="bg-black/50 text-white px-5 py-2 rounded-full backdrop-blur-md border border-white/10">
+          <span className="text-sm font-medium">Moves: {progress.moves}</span>
+        </div>
 
-        {/* Menu Button (Top Right) */}
+        {/* Menu Button */}
         <button
           onClick={openMenu}
-          className="pointer-events-auto w-12 h-12 bg-black/40 hover:bg-black/60 backdrop-blur-md rounded-full flex items-center justify-center text-white transition-colors"
+          className="w-12 h-12 bg-black/40 hover:bg-black/60 backdrop-blur-md rounded-full flex items-center justify-center text-white transition-colors"
           title="Menu"
         >
           <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -171,12 +95,42 @@ export const Game: React.FC<GameProps> = ({ onComplete, onRestart, onHome }) => 
         </button>
       </div>
 
+      {/* Puzzle Grid - Centered */}
+      <div className="flex-1 flex items-center justify-center relative z-10 p-4">
+        <div
+          className="relative bg-black/30 rounded-xl p-2 backdrop-blur-sm"
+          style={{
+            width: IMAGE_SIZE + 16,
+            height: IMAGE_SIZE + 16,
+          }}
+        >
+          <div
+            className="relative"
+            style={{
+              width: IMAGE_SIZE,
+              height: IMAGE_SIZE,
+            }}
+          >
+            {board.map((tileValue, position) => (
+              <Tile
+                key={`tile-${position}`}
+                tileValue={tileValue}
+                position={position}
+                imageUrl={imageUrl}
+                onClick={() => moveTile(position)}
+                isAdjacent={isAdjacentToEmpty(board, position)}
+              />
+            ))}
+          </div>
+        </div>
+      </div>
+
       {/* Menu Overlay */}
       <GameMenu
         isOpen={isMenuOpen}
         onClose={closeMenu}
-        onResetView={handleResetView}
-        onNewGame={handleNewGameClick}
+        onShuffle={handleNewGameClick}
+        onNewGame={handleNewGame}
         onHome={onHome}
       />
     </div>

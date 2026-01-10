@@ -26,7 +26,7 @@ interface CollectionDef {
 }
 
 const GAMES: GameDef[] = [
-  { id: 'block-puzzle', name: 'Blocks', icon: '🧩', gameType: 'block-puzzle', active: true, color: 'from-emerald-500 to-teal-600' },
+  { id: 'block-puzzle', name: '8 Puzzle', icon: '🧩', gameType: 'block-puzzle', active: true, color: 'from-emerald-500 to-teal-600' },
   { id: 'sudoku', name: 'Sudoku', icon: '🔢', gameType: 'sudoku', active: true, color: 'from-blue-500 to-indigo-600' },
   { id: 'jigsaw', name: 'Jigsaw', icon: '🖼️', active: false, color: 'from-purple-500 to-violet-600' },
   { id: 'shapes', name: 'Shapes', icon: '◇', active: false, color: 'from-amber-500 to-orange-600' },
@@ -37,12 +37,12 @@ const GAMES: GameDef[] = [
 ];
 
 const COLLECTIONS: CollectionDef[] = [
-  { id: 'nature', name: 'Nature', imageId: 10, badge: 'Blocks', badgeColor: 'bg-emerald-500' },
+  { id: 'nature', name: 'Nature', imageId: 10, badge: '8 Puzzle', badgeColor: 'bg-emerald-500' },
   { id: 'space', name: 'Space', imageId: 110, badge: 'Jigsaw', badgeColor: 'bg-purple-500' },
-  { id: 'ocean', name: 'Ocean', imageId: 1015, badge: 'Blocks', badgeColor: 'bg-emerald-500' },
+  { id: 'ocean', name: 'Ocean', imageId: 1015, badge: '8 Puzzle', badgeColor: 'bg-emerald-500' },
   { id: 'cities', name: 'Cities', imageId: 1040, badge: 'Shapes', badgeColor: 'bg-amber-500' },
   { id: 'art', name: 'Art', imageId: 1050, badge: 'Jigsaw', badgeColor: 'bg-purple-500' },
-  { id: 'animals', name: 'Animals', imageId: 1074, badge: 'Blocks', badgeColor: 'bg-emerald-500' },
+  { id: 'animals', name: 'Animals', imageId: 1074, badge: '8 Puzzle', badgeColor: 'bg-emerald-500' },
 ];
 
 export const StartScreen: React.FC<StartScreenProps> = ({ onSelectGame }) => {
