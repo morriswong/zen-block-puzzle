@@ -1,17 +1,26 @@
 import React, { useState } from 'react';
 import { StartScreen } from './components/StartScreen';
 import { Game } from './components/Game';
+import { SudokuGame } from './components/SudokuGame';
 import { EndScreen } from './components/EndScreen';
 
+type GameType = 'block-puzzle' | 'sudoku';
 type ScreenState = 'start' | 'game' | 'end';
 
 const App: React.FC = () => {
   const [screen, setScreen] = useState<ScreenState>('start');
-  const [gameKey, setGameKey] = useState(0); // Key to force new image on restart
+  const [currentGame, setCurrentGame] = useState<GameType>('block-puzzle');
+  const [gameKey, setGameKey] = useState(0); // Key to force new game on restart
   const [completedImageUrl, setCompletedImageUrl] = useState<string>('');
 
+  const handleSelectGame = (game: GameType) => {
+    setCurrentGame(game);
+    setGameKey(prev => prev + 1);
+    setScreen('game');
+  };
+
   const handleNewGame = () => {
-    setGameKey(prev => prev + 1); // Increment key to force new image
+    setGameKey(prev => prev + 1);
     setScreen('game');
   };
 
@@ -25,11 +34,15 @@ const App: React.FC = () => {
 
       {/* Screen Routing */}
       {screen === 'start' && (
-        <StartScreen onStart={() => setScreen('game')} />
+        <StartScreen onSelectGame={handleSelectGame} />
       )}
 
-      {screen === 'game' && (
+      {screen === 'game' && currentGame === 'block-puzzle' && (
         <Game key={gameKey} onComplete={handleGameComplete} onRestart={handleNewGame} onHome={() => setScreen('start')} />
+      )}
+
+      {screen === 'game' && currentGame === 'sudoku' && (
+        <SudokuGame key={gameKey} onComplete={handleGameComplete} onRestart={handleNewGame} onHome={() => setScreen('start')} />
       )}
 
       {screen === 'end' && (
