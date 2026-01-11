@@ -43,39 +43,39 @@ const isAdjacentToEmpty = (board: BoardState, position: number): boolean => {
   return (rowDiff === 1 && colDiff === 0) || (rowDiff === 0 && colDiff === 1);
 };
 
-// Count inversions in the puzzle (for solvability check)
-const countInversions = (board: BoardState): number => {
-  let inversions = 0;
-  const tiles = board.filter(t => t !== EMPTY_TILE);
+// Get positions adjacent to the empty tile
+const getAdjacentPositions = (emptyPos: number): number[] => {
+  const { row, col } = getRowCol(emptyPos);
+  const adjacent: number[] = [];
 
-  for (let i = 0; i < tiles.length; i++) {
-    for (let j = i + 1; j < tiles.length; j++) {
-      if (tiles[i] > tiles[j]) {
-        inversions++;
-      }
-    }
-  }
-  return inversions;
+  if (row > 0) adjacent.push((row - 1) * GRID_SIZE + col); // up
+  if (row < GRID_SIZE - 1) adjacent.push((row + 1) * GRID_SIZE + col); // down
+  if (col > 0) adjacent.push(row * GRID_SIZE + (col - 1)); // left
+  if (col < GRID_SIZE - 1) adjacent.push(row * GRID_SIZE + (col + 1)); // right
+
+  return adjacent;
 };
 
-// Check if a puzzle configuration is solvable
-// For a 3x3 puzzle, solvable if number of inversions is even
-const isSolvable = (board: BoardState): boolean => {
-  return countInversions(board) % 2 === 0;
-};
+// Generate an easy puzzle by making a limited number of random moves
+// This guarantees solvability and controls difficulty
+const SHUFFLE_MOVES = 15; // Number of random moves - easy difficulty
 
-// Generate a shuffled, solvable puzzle
 const generateShuffledBoard = (): BoardState => {
-  let board: BoardState;
+  const board = [...SOLVED_STATE];
+  let lastMove = -1; // Track last move to avoid immediate undo
 
-  do {
-    // Fisher-Yates shuffle
-    board = [...SOLVED_STATE];
-    for (let i = board.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [board[i], board[j]] = [board[j], board[i]];
-    }
-  } while (!isSolvable(board) || isSolved(board));
+  for (let i = 0; i < SHUFFLE_MOVES; i++) {
+    const emptyPos = board.indexOf(EMPTY_TILE);
+    const adjacent = getAdjacentPositions(emptyPos);
+
+    // Filter out the last moved position to avoid undoing the previous move
+    const validMoves = adjacent.filter(pos => pos !== lastMove);
+    const randomPos = validMoves[Math.floor(Math.random() * validMoves.length)];
+
+    // Swap
+    [board[emptyPos], board[randomPos]] = [board[randomPos], board[emptyPos]];
+    lastMove = emptyPos;
+  }
 
   return board;
 };
