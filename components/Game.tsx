@@ -1,5 +1,5 @@
-import React, { useMemo } from 'react';
-import { getImageUrl, IMAGE_SIZE, GRID_SIZE, EMPTY_TILE } from '../constants';
+import React, { useMemo, useState, useEffect } from 'react';
+import { getImageUrl, GRID_SIZE, EMPTY_TILE } from '../constants';
 import { Tile } from './Tile';
 import { GameMenu } from './GameMenu';
 import { useGameMenu } from '../hooks/useGameMenu';
@@ -25,8 +25,38 @@ const isAdjacentToEmpty = (board: number[], position: number): boolean => {
   return (rowDiff === 1 && colDiff === 0) || (rowDiff === 0 && colDiff === 1);
 };
 
+// Calculate tile size based on viewport
+const calculateTileSize = (): number => {
+  const padding = 48; // 24px padding on each side
+  const topBarHeight = 80; // Approximate height of top bar
+  const availableWidth = window.innerWidth - padding;
+  const availableHeight = window.innerHeight - topBarHeight - padding;
+
+  // Use the smaller dimension to ensure square puzzle fits
+  const maxPuzzleSize = Math.min(availableWidth, availableHeight);
+
+  // Calculate tile size (puzzle is 3x3)
+  const tileSize = Math.floor(maxPuzzleSize / GRID_SIZE);
+
+  // Cap at 200px per tile for larger screens
+  return Math.min(tileSize, 200);
+};
+
 export const Game: React.FC<GameProps> = ({ onComplete, onRestart, onHome }) => {
   const imageUrl = useMemo(() => getImageUrl(), []);
+  const [tileSize, setTileSize] = useState(() => calculateTileSize());
+
+  // Update tile size on window resize
+  useEffect(() => {
+    const handleResize = () => {
+      setTileSize(calculateTileSize());
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  const puzzleSize = tileSize * GRID_SIZE;
 
   // Sliding puzzle logic
   const { board, progress, moveTile, shuffle } = useSlidingPuzzle({
@@ -100,15 +130,15 @@ export const Game: React.FC<GameProps> = ({ onComplete, onRestart, onHome }) => 
         <div
           className="relative bg-black/30 rounded-xl p-2 backdrop-blur-sm"
           style={{
-            width: IMAGE_SIZE + 16,
-            height: IMAGE_SIZE + 16,
+            width: puzzleSize + 16,
+            height: puzzleSize + 16,
           }}
         >
           <div
             className="relative"
             style={{
-              width: IMAGE_SIZE,
-              height: IMAGE_SIZE,
+              width: puzzleSize,
+              height: puzzleSize,
             }}
           >
             {board.map((tileValue, position) => (
@@ -119,6 +149,7 @@ export const Game: React.FC<GameProps> = ({ onComplete, onRestart, onHome }) => 
                 imageUrl={imageUrl}
                 onClick={() => moveTile(position)}
                 isAdjacent={isAdjacentToEmpty(board, position)}
+                tileSize={tileSize}
               />
             ))}
           </div>

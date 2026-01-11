@@ -1,5 +1,5 @@
 import React from 'react';
-import { TILE_SIZE, GRID_SIZE, EMPTY_TILE } from '../constants';
+import { GRID_SIZE, EMPTY_TILE } from '../constants';
 
 interface TileProps {
   tileValue: number;      // 0-7 for image tiles, 8 for empty
@@ -7,6 +7,7 @@ interface TileProps {
   imageUrl: string;
   onClick: () => void;
   isAdjacent: boolean;    // Can this tile be moved?
+  tileSize: number;       // Dynamic tile size based on viewport
 }
 
 export const Tile: React.FC<TileProps> = ({
@@ -15,6 +16,7 @@ export const Tile: React.FC<TileProps> = ({
   imageUrl,
   onClick,
   isAdjacent,
+  tileSize,
 }) => {
   // Calculate grid position for this tile
   const row = Math.floor(position / GRID_SIZE);
@@ -23,8 +25,8 @@ export const Tile: React.FC<TileProps> = ({
   // Calculate the background position based on which tile this is (its original position)
   const tileRow = Math.floor(tileValue / GRID_SIZE);
   const tileCol = tileValue % GRID_SIZE;
-  const bgX = -tileCol * TILE_SIZE;
-  const bgY = -tileRow * TILE_SIZE;
+  const bgX = -tileCol * tileSize;
+  const bgY = -tileRow * tileSize;
 
   // Empty tile
   if (tileValue === EMPTY_TILE) {
@@ -32,10 +34,10 @@ export const Tile: React.FC<TileProps> = ({
       <div
         className="absolute"
         style={{
-          left: col * TILE_SIZE,
-          top: row * TILE_SIZE,
-          width: TILE_SIZE,
-          height: TILE_SIZE,
+          left: col * tileSize,
+          top: row * tileSize,
+          width: tileSize,
+          height: tileSize,
         }}
       />
     );
@@ -50,13 +52,13 @@ export const Tile: React.FC<TileProps> = ({
           : 'cursor-default'
       }`}
       style={{
-        left: col * TILE_SIZE,
-        top: row * TILE_SIZE,
-        width: TILE_SIZE,
-        height: TILE_SIZE,
+        left: col * tileSize,
+        top: row * tileSize,
+        width: tileSize,
+        height: tileSize,
         backgroundImage: `url(${imageUrl})`,
         backgroundPosition: `${bgX}px ${bgY}px`,
-        backgroundSize: `${TILE_SIZE * GRID_SIZE}px ${TILE_SIZE * GRID_SIZE}px`,
+        backgroundSize: `${tileSize * GRID_SIZE}px ${tileSize * GRID_SIZE}px`,
         boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.1), 0 2px 8px rgba(0,0,0,0.3)',
         borderRadius: '4px',
       }}
