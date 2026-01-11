@@ -143,7 +143,7 @@ export const Game: React.FC<GameProps> = ({ onComplete, onRestart, onHome }) => 
           >
             {board.map((tileValue, position) => (
               <Tile
-                key={`tile-${position}`}
+                key={`tile-${tileValue}`}
                 tileValue={tileValue}
                 position={position}
                 imageUrl={imageUrl}
