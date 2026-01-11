@@ -141,17 +141,21 @@ export const Game: React.FC<GameProps> = ({ onComplete, onRestart, onHome }) => 
               height: puzzleSize,
             }}
           >
-            {board.map((tileValue, position) => (
-              <Tile
-                key={`tile-${tileValue}`}
-                tileValue={tileValue}
-                position={position}
-                imageUrl={imageUrl}
-                onClick={() => moveTile(position)}
-                isAdjacent={isAdjacentToEmpty(board, position)}
-                tileSize={tileSize}
-              />
-            ))}
+            {/* Render tiles in fixed order (by tileValue) so DOM elements stay consistent */}
+            {[0, 1, 2, 3, 4, 5, 6, 7, 8].map((tileValue) => {
+              const position = board.indexOf(tileValue);
+              return (
+                <Tile
+                  key={`tile-${tileValue}`}
+                  tileValue={tileValue}
+                  position={position}
+                  imageUrl={imageUrl}
+                  onClick={() => moveTile(position)}
+                  isAdjacent={isAdjacentToEmpty(board, position)}
+                  tileSize={tileSize}
+                />
+              );
+            })}
           </div>
         </div>
       </div>
