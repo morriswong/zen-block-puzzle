@@ -3,18 +3,15 @@ import React from 'react';
 interface GameMenuProps {
   isOpen: boolean;
   onClose: () => void;
-  onResetView: () => void;
+  onShuffle: () => void;
   onNewGame: () => void;
   onHome: () => void;
 }
 
-/**
- * Game menu overlay component
- */
 export const GameMenu: React.FC<GameMenuProps> = ({
   isOpen,
   onClose,
-  onResetView,
+  onShuffle,
   onNewGame,
   onHome
 }) => {
@@ -22,7 +19,7 @@ export const GameMenu: React.FC<GameMenuProps> = ({
 
   return (
     <div className="absolute inset-0 bg-black/80 backdrop-blur-sm z-[100] flex items-center justify-center">
-      <div className="bg-gray-800 p-8 rounded-2xl max-w-sm w-full space-y-4 shadow-2xl border border-gray-700">
+      <div className="bg-gray-800 p-8 rounded-2xl max-w-sm w-full space-y-4 shadow-2xl border border-gray-700 mx-4">
         <h2 className="text-2xl font-bold text-white text-center mb-6">Game Menu</h2>
 
         <button
@@ -38,15 +35,17 @@ export const GameMenu: React.FC<GameMenuProps> = ({
         <div className="h-px bg-gray-600 my-2" />
 
         <button
-          onClick={onResetView}
+          onClick={onShuffle}
           className="w-full py-4 bg-gray-700 hover:bg-gray-600 rounded-xl text-white font-medium transition-colors flex items-center justify-center gap-3"
         >
           <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M15 3h6v6" />
-            <path d="M10 14 21 3" />
-            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+            <path d="M2 18h1.4c1.3 0 2.5-.6 3.3-1.7l6.1-8.6c.7-1.1 2-1.7 3.3-1.7H22" />
+            <path d="m18 2 4 4-4 4" />
+            <path d="M2 6h1.9c1.5 0 2.9.9 3.6 2.2" />
+            <path d="M22 18h-5.9c-1.3 0-2.6-.7-3.3-1.8l-.5-.8" />
+            <path d="m18 14 4 4-4 4" />
           </svg>
-          Reset View
+          Shuffle
         </button>
 
         <button
@@ -54,12 +53,13 @@ export const GameMenu: React.FC<GameMenuProps> = ({
           className="w-full py-4 bg-blue-600 hover:bg-blue-500 rounded-xl text-white font-medium transition-colors flex items-center justify-center gap-3"
         >
           <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
-            <path d="M3 3v5h5" />
-            <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16" />
-            <path d="M16 16h5v5" />
+            <rect width="18" height="18" x="3" y="3" rx="2" />
+            <path d="M9 3v18" />
+            <path d="M15 3v18" />
+            <path d="M3 9h18" />
+            <path d="M3 15h18" />
           </svg>
-          New Game
+          New Image
         </button>
 
         <button
