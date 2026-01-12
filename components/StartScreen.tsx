@@ -1,11 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { getImageUrl } from '../constants';
 import { ComingSoonModal } from './ComingSoonModal';
 
 type GameType = 'block-puzzle' | 'sudoku' | 'photo-blast';
 
 interface StartScreenProps {
-  onSelectGame: (game: GameType) => void;
+  onSelectGame: (game: GameType, imageUrl?: string) => void;
 }
 
 interface GameDef {
@@ -48,6 +48,7 @@ const COLLECTIONS: CollectionDef[] = [
 export const StartScreen: React.FC<StartScreenProps> = ({ onSelectGame }) => {
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedGame, setSelectedGame] = useState<{ name: string; icon: string } | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleGameClick = (game: GameDef) => {
     if (game.active && game.gameType) {
@@ -63,10 +64,59 @@ export const StartScreen: React.FC<StartScreenProps> = ({ onSelectGame }) => {
     setModalOpen(true);
   };
 
+  const handlePhotoUpload = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Create a canvas to crop the image to a square
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const size = 600; // Match the puzzle image size
+        canvas.width = size;
+        canvas.height = size;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+
+        // Calculate crop to center square
+        const minDim = Math.min(img.width, img.height);
+        const sx = (img.width - minDim) / 2;
+        const sy = (img.height - minDim) / 2;
+
+        // Draw cropped and scaled image
+        ctx.drawImage(img, sx, sy, minDim, minDim, 0, 0, size, size);
+
+        // Convert to data URL and start game
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+        onSelectGame('block-puzzle', dataUrl);
+      };
+      img.src = e.target?.result as string;
+    };
+    reader.readAsDataURL(file);
+
+    // Reset input so same file can be selected again
+    event.target.value = '';
+  };
+
   const heroImageUrl = `https://picsum.photos/id/1018/800/400`;
 
   return (
     <div className="absolute inset-0 flex flex-col bg-gray-950 z-50 overflow-y-auto">
+      {/* Hidden file input for photo upload */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        onChange={handleFileChange}
+        className="hidden"
+      />
+
       {/* Header */}
       <div className="text-center pt-8 pb-4 flex-shrink-0">
         <div className="flex items-center justify-center gap-1 mb-1">
@@ -87,14 +137,22 @@ export const StartScreen: React.FC<StartScreenProps> = ({ onSelectGame }) => {
         <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent" />
         <div className="absolute inset-0 bg-gradient-to-r from-red-900/30 to-transparent" />
         <div className="absolute bottom-0 left-0 right-0 p-4 text-center">
-          <p className="text-white/60 text-xs uppercase tracking-widest mb-1">Featured Puzzle</p>
-          <h2 className="text-white text-xl font-bold mb-3">Random Challenge</h2>
-          <button
-            onClick={() => onSelectGame('block-puzzle')}
-            className="px-8 py-2 bg-white text-black font-semibold rounded-full hover:bg-gray-200 transition-colors text-sm"
-          >
-            Play
-          </button>
+          <p className="text-white/60 text-xs uppercase tracking-widest mb-1">8 Puzzle</p>
+          <h2 className="text-white text-xl font-bold mb-3">Create Your Own</h2>
+          <div className="flex gap-3 justify-center">
+            <button
+              onClick={handlePhotoUpload}
+              className="px-6 py-2 bg-gradient-to-r from-pink-500 to-rose-500 text-white font-semibold rounded-full hover:from-pink-600 hover:to-rose-600 transition-all text-sm shadow-lg shadow-pink-500/25"
+            >
+              Use Your Photo
+            </button>
+            <button
+              onClick={() => onSelectGame('block-puzzle')}
+              className="px-6 py-2 bg-white/20 backdrop-blur-sm text-white font-semibold rounded-full hover:bg-white/30 transition-colors text-sm border border-white/20"
+            >
+              Random
+            </button>
+          </div>
         </div>
       </div>
 
