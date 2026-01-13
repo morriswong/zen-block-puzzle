@@ -135,7 +135,6 @@ const DragPreview: React.FC<DragPreviewProps> = ({ block, position, cellSize, is
 export const PhotoBlastGame: React.FC<PhotoBlastGameProps> = ({ onComplete, onRestart, onHome }) => {
   const imageUrl = useMemo(() => getImageUrl(), []);
   const [cellSize, setCellSize] = useState(() => calculateCellSize());
-  const [gameOver, setGameOver] = useState(false);
 
   // Drag state
   const [draggingIndex, setDraggingIndex] = useState<number | null>(null);
@@ -166,19 +165,11 @@ export const PhotoBlastGame: React.FC<PhotoBlastGameProps> = ({ onComplete, onRe
     revealedCols,
     placeBlock,
     canPlaceBlock,
-    canPlaceAnyBlock,
     resetGame,
   } = useBlockBlast({
     onComplete,
     imageUrl,
   });
-
-  // Check for game over
-  useEffect(() => {
-    if (!canPlaceAnyBlock() && currentBlocks.some(b => b !== null)) {
-      setGameOver(true);
-    }
-  }, [currentBlocks, canPlaceAnyBlock]);
 
   // Menu state
   const { isMenuOpen, openMenu, closeMenu } = useGameMenu();
@@ -305,7 +296,6 @@ export const PhotoBlastGame: React.FC<PhotoBlastGameProps> = ({ onComplete, onRe
 
   const handleShuffle = () => {
     resetGame();
-    setGameOver(false);
     closeMenu();
   };
 
@@ -451,10 +441,7 @@ export const PhotoBlastGame: React.FC<PhotoBlastGameProps> = ({ onComplete, onRe
 
         {/* Hint text */}
         <p className="text-center text-white/40 text-xs mt-3">
-          {gameOver
-            ? 'No valid moves! Try again.'
-            : 'Drag blocks onto the grid'
-          }
+          Drag blocks onto the grid to reveal the photo
         </p>
       </div>
 
@@ -466,32 +453,6 @@ export const PhotoBlastGame: React.FC<PhotoBlastGameProps> = ({ onComplete, onRe
           cellSize={cellSize}
           isValid={isValidDrop}
         />
-      )}
-
-      {/* Game Over Overlay */}
-      {gameOver && (
-        <div className="absolute inset-0 z-40 flex items-center justify-center bg-black/70 backdrop-blur-sm">
-          <div className="bg-gray-900/90 rounded-2xl p-6 text-center max-w-xs mx-4">
-            <h2 className="text-white text-2xl font-bold mb-2">Game Over</h2>
-            <p className="text-white/60 mb-4">
-              You revealed {progress.linesCleared} of {progress.totalLinesToClear} lines
-            </p>
-            <div className="flex gap-3 justify-center">
-              <button
-                onClick={handleShuffle}
-                className="px-6 py-2 bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-full transition-colors"
-              >
-                Try Again
-              </button>
-              <button
-                onClick={onHome}
-                className="px-6 py-2 bg-gray-700 hover:bg-gray-600 text-white font-semibold rounded-full transition-colors"
-              >
-                Home
-              </button>
-            </div>
-          </div>
-        </div>
       )}
 
       {/* Menu Overlay */}
