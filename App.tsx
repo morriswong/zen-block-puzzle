@@ -2,9 +2,10 @@ import React, { useState } from 'react';
 import { StartScreen } from './components/StartScreen';
 import { Game } from './components/Game';
 import { SudokuGame } from './components/SudokuGame';
+import { PhotoBlastGame } from './components/PhotoBlastGame';
 import { EndScreen } from './components/EndScreen';
 
-type GameType = 'block-puzzle' | 'sudoku';
+type GameType = 'block-puzzle' | 'sudoku' | 'photo-blast';
 type ScreenState = 'start' | 'game' | 'end';
 
 const App: React.FC = () => {
@@ -43,6 +44,10 @@ const App: React.FC = () => {
 
       {screen === 'game' && currentGame === 'sudoku' && (
         <SudokuGame key={gameKey} onComplete={handleGameComplete} onRestart={handleNewGame} onHome={() => setScreen('start')} />
+      )}
+
+      {screen === 'game' && currentGame === 'photo-blast' && (
+        <PhotoBlastGame key={gameKey} onComplete={handleGameComplete} onRestart={handleNewGame} onHome={() => setScreen('start')} />
       )}
 
       {screen === 'end' && (
