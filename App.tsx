@@ -51,7 +51,7 @@ const App: React.FC = () => {
       )}
 
       {screen === 'end' && (
-        <EndScreen imageUrl={completedImageUrl} onRestart={handleNewGame} />
+        <EndScreen imageUrl={completedImageUrl} onRestart={handleNewGame} gameType={currentGame} />
       )}
 
     </div>

@@ -110,8 +110,8 @@ interface UseBlockBlastReturn {
   grid: GridCell[][];
   currentBlocks: (BlockShape | null)[];
   progress: BlockBlastProgress;
-  revealedRows: Set<number>;
-  revealedCols: Set<number>;
+  clearedRows: Set<number>;
+  clearedCols: Set<number>;
   placeBlock: (blockIndex: number, gridRow: number, gridCol: number) => boolean;
   canPlaceBlock: (block: BlockShape, gridRow: number, gridCol: number) => boolean;
   canPlaceAnyBlock: () => boolean;
@@ -123,26 +123,10 @@ const getRandomColorIndex = (): number => {
   return Math.floor(Math.random() * BLOCK_COLORS.length);
 };
 
-// Check if a cell is available (not filled AND not in a revealed row/column)
-const isCellAvailable = (
-  row: number,
-  col: number,
-  grid: GridCell[][],
-  revealedRows: Set<number>,
-  revealedCols: Set<number>
-): boolean => {
-  if (grid[row][col].filled) return false;
-  if (revealedRows.has(row)) return false;
-  if (revealedCols.has(col)) return false;
-  return true;
-};
-
-// Check if a specific block can be placed anywhere on a grid
+// Check if a specific block can be placed anywhere on a grid (only checks empty cells)
 const canPlaceBlockAnywhere = (
   block: { pattern: number[][] },
-  grid: GridCell[][],
-  revealedRows: Set<number>,
-  revealedCols: Set<number>
+  grid: GridCell[][]
 ): boolean => {
   const pattern = block.pattern;
   const rows = pattern.length;
@@ -155,7 +139,7 @@ const canPlaceBlockAnywhere = (
       outer: for (let r = 0; r < rows; r++) {
         for (let c = 0; c < cols; c++) {
           if (pattern[r][c] === 1) {
-            if (!isCellAvailable(gridRow + r, gridCol + c, grid, revealedRows, revealedCols)) {
+            if (grid[gridRow + r][gridCol + c].filled) {
               canPlace = false;
               break outer;
             }
@@ -171,15 +155,11 @@ const canPlaceBlockAnywhere = (
 };
 
 // Generate a random block that can fit on the grid
-const generateFittingBlock = (
-  grid: GridCell[][],
-  revealedRows: Set<number>,
-  revealedCols: Set<number>
-): BlockShape => {
+const generateFittingBlock = (grid: GridCell[][]): BlockShape => {
   const shuffled = [...WEIGHTED_BLOCK_ARRAY].sort(() => Math.random() - 0.5);
 
   for (const shape of shuffled) {
-    if (canPlaceBlockAnywhere(shape, grid, revealedRows, revealedCols)) {
+    if (canPlaceBlockAnywhere(shape, grid)) {
       return {
         ...shape,
         color: BLOCK_COLORS[getRandomColorIndex()],
@@ -195,15 +175,11 @@ const generateFittingBlock = (
 };
 
 // Generate 3 random blocks that can fit
-const generateBlockSet = (
-  grid: GridCell[][],
-  revealedRows: Set<number>,
-  revealedCols: Set<number>
-): BlockShape[] => {
+const generateBlockSet = (grid: GridCell[][]): BlockShape[] => {
   return [
-    generateFittingBlock(grid, revealedRows, revealedCols),
-    generateFittingBlock(grid, revealedRows, revealedCols),
-    generateFittingBlock(grid, revealedRows, revealedCols),
+    generateFittingBlock(grid),
+    generateFittingBlock(grid),
+    generateFittingBlock(grid),
   ];
 };
 
@@ -223,15 +199,16 @@ export const useBlockBlast = ({
 }: UseBlockBlastProps): UseBlockBlastReturn => {
   const [grid, setGrid] = useState<GridCell[][]>(() => createEmptyGrid());
   const [currentBlocks, setCurrentBlocks] = useState<(BlockShape | null)[]>(() =>
-    generateBlockSet(createEmptyGrid(), new Set(), new Set())
+    generateBlockSet(createEmptyGrid())
   );
   const [score, setScore] = useState(0);
-  const [revealedRows, setRevealedRows] = useState<Set<number>>(new Set());
-  const [revealedCols, setRevealedCols] = useState<Set<number>>(new Set());
+  // Track which lines have EVER been cleared (for photo reveal progress)
+  const [clearedRows, setClearedRows] = useState<Set<number>>(new Set());
+  const [clearedCols, setClearedCols] = useState<Set<number>>(new Set());
   const [hasCompleted, setHasCompleted] = useState(false);
 
-  // Check if all rows and columns are revealed
-  const isComplete = revealedRows.size === GRID_SIZE && revealedCols.size === GRID_SIZE;
+  // Check if all rows and columns have been cleared at least once
+  const isComplete = clearedRows.size === GRID_SIZE && clearedCols.size === GRID_SIZE;
 
   // Trigger completion
   useEffect(() => {
@@ -243,7 +220,7 @@ export const useBlockBlast = ({
     }
   }, [isComplete, hasCompleted, onComplete, imageUrl]);
 
-  // Check if a block can be placed at a position (respects revealed areas)
+  // Check if a block can be placed at a position (only checks empty cells - NO revealed area restriction)
   const canPlaceBlock = useCallback((block: BlockShape, gridRow: number, gridCol: number): boolean => {
     const pattern = block.pattern;
     const rows = pattern.length;
@@ -264,28 +241,23 @@ export const useBlockBlast = ({
           if (grid[newRow][newCol].filled) {
             return false;
           }
-
-          // Cell is in a revealed row or column - CANNOT place blocks on revealed areas
-          if (revealedRows.has(newRow) || revealedCols.has(newCol)) {
-            return false;
-          }
         }
       }
     }
 
     return true;
-  }, [grid, revealedRows, revealedCols]);
+  }, [grid]);
 
   // Check if any current block can be placed anywhere
   const canPlaceAnyBlock = useCallback((): boolean => {
     for (const block of currentBlocks) {
       if (!block) continue;
-      if (canPlaceBlockAnywhere(block, grid, revealedRows, revealedCols)) {
+      if (canPlaceBlockAnywhere(block, grid)) {
         return true;
       }
     }
     return false;
-  }, [currentBlocks, grid, revealedRows, revealedCols]);
+  }, [currentBlocks, grid]);
 
   // Auto-regenerate blocks when stuck (ensures game is always completable)
   useEffect(() => {
@@ -293,10 +265,10 @@ export const useBlockBlast = ({
     if (hasBlocks && !isComplete) {
       const canPlace = canPlaceAnyBlock();
       if (!canPlace) {
-        setCurrentBlocks(generateBlockSet(grid, revealedRows, revealedCols));
+        setCurrentBlocks(generateBlockSet(grid));
       }
     }
-  }, [grid, currentBlocks, isComplete, canPlaceAnyBlock, revealedRows, revealedCols]);
+  }, [grid, currentBlocks, isComplete, canPlaceAnyBlock]);
 
   // Place a block on the grid
   const placeBlock = useCallback((blockIndex: number, gridRow: number, gridCol: number): boolean => {
@@ -323,58 +295,45 @@ export const useBlockBlast = ({
       }
     }
 
-    // Check for completed rows and columns (only non-revealed ones)
+    // Check for completed rows and columns
     const completedRows: number[] = [];
     const completedCols: number[] = [];
 
     for (let row = 0; row < GRID_SIZE; row++) {
-      if (!revealedRows.has(row)) {
-        // A row is complete if all non-revealed-column cells are filled
-        const rowComplete = newGrid[row].every((cell, col) =>
-          cell.filled || revealedCols.has(col)
-        );
-        if (rowComplete) completedRows.push(row);
+      if (newGrid[row].every(cell => cell.filled)) {
+        completedRows.push(row);
       }
     }
 
     for (let col = 0; col < GRID_SIZE; col++) {
-      if (!revealedCols.has(col)) {
-        // A column is complete if all non-revealed-row cells are filled
-        const colComplete = newGrid.every((row, rowIdx) =>
-          row[col].filled || revealedRows.has(rowIdx)
-        );
-        if (colComplete) completedCols.push(col);
+      if (newGrid.every(row => row[col].filled)) {
+        completedCols.push(col);
       }
     }
-
-    // Update revealed state
-    const newRevealedRows = new Set(revealedRows);
-    const newRevealedCols = new Set(revealedCols);
 
     const totalCleared = completedRows.length + completedCols.length;
 
     if (totalCleared > 0) {
-      // Clear cells and mark as revealed
+      // Clear the completed lines
       completedRows.forEach(row => {
-        newRevealedRows.add(row);
         for (let c = 0; c < GRID_SIZE; c++) {
-          if (!revealedCols.has(c)) {
-            newGrid[row][c] = { filled: false, colorIndex: -1 };
-          }
+          newGrid[row][c] = { filled: false, colorIndex: -1 };
         }
       });
 
       completedCols.forEach(col => {
-        newRevealedCols.add(col);
         for (let r = 0; r < GRID_SIZE; r++) {
-          if (!revealedRows.has(r)) {
-            newGrid[r][col] = { filled: false, colorIndex: -1 };
-          }
+          newGrid[r][col] = { filled: false, colorIndex: -1 };
         }
       });
 
-      setRevealedRows(newRevealedRows);
-      setRevealedCols(newRevealedCols);
+      // Update progress tracking (which lines have ever been cleared)
+      const newClearedRows = new Set(clearedRows);
+      const newClearedCols = new Set(clearedCols);
+      completedRows.forEach(row => newClearedRows.add(row));
+      completedCols.forEach(col => newClearedCols.add(col));
+      setClearedRows(newClearedRows);
+      setClearedCols(newClearedCols);
 
       const baseScore = totalCleared * 10;
       const bonus = totalCleared > 1 ? totalCleared * 5 : 0;
@@ -389,40 +348,38 @@ export const useBlockBlast = ({
 
     // If all blocks used, generate new set
     if (newBlocks.every(b => b === null)) {
-      setCurrentBlocks(generateBlockSet(newGrid, newRevealedRows, newRevealedCols));
+      setCurrentBlocks(generateBlockSet(newGrid));
     } else {
       setCurrentBlocks(newBlocks);
     }
 
     return true;
-  }, [grid, currentBlocks, canPlaceBlock, revealedRows, revealedCols]);
+  }, [grid, currentBlocks, canPlaceBlock, clearedRows, clearedCols]);
 
   // Reset game
   const resetGame = useCallback(() => {
     const emptyGrid = createEmptyGrid();
-    const emptyRows = new Set<number>();
-    const emptyCols = new Set<number>();
     setGrid(emptyGrid);
-    setCurrentBlocks(generateBlockSet(emptyGrid, emptyRows, emptyCols));
+    setCurrentBlocks(generateBlockSet(emptyGrid));
     setScore(0);
-    setRevealedRows(emptyRows);
-    setRevealedCols(emptyCols);
+    setClearedRows(new Set());
+    setClearedCols(new Set());
     setHasCompleted(false);
   }, []);
 
   const progress: BlockBlastProgress = useMemo(() => ({
     score,
-    linesCleared: revealedRows.size + revealedCols.size,
+    linesCleared: clearedRows.size + clearedCols.size,
     totalLinesToClear: GRID_SIZE * 2,
     isComplete,
-  }), [score, revealedRows.size, revealedCols.size, isComplete]);
+  }), [score, clearedRows.size, clearedCols.size, isComplete]);
 
   return {
     grid,
     currentBlocks,
     progress,
-    revealedRows,
-    revealedCols,
+    clearedRows,
+    clearedCols,
     placeBlock,
     canPlaceBlock,
     canPlaceAnyBlock,
