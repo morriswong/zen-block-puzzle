@@ -161,8 +161,8 @@ export const PhotoBlastGame: React.FC<PhotoBlastGameProps> = ({ onComplete, onRe
     grid,
     currentBlocks,
     progress,
-    revealedRows,
-    revealedCols,
+    clearedRows,
+    clearedCols,
     placeBlock,
     canPlaceBlock,
     resetGame,
@@ -299,11 +299,6 @@ export const PhotoBlastGame: React.FC<PhotoBlastGameProps> = ({ onComplete, onRe
     closeMenu();
   };
 
-  // Check if a cell should show the photo (revealed)
-  const isCellRevealed = useCallback((row: number, col: number): boolean => {
-    return revealedRows.has(row) || revealedCols.has(col);
-  }, [revealedRows, revealedCols]);
-
   // Get dragging block for preview
   const draggingBlock = draggingIndex !== null ? currentBlocks[draggingIndex] : null;
 
@@ -358,68 +353,86 @@ export const PhotoBlastGame: React.FC<PhotoBlastGameProps> = ({ onComplete, onRe
 
       {/* Game Grid - Centered */}
       <div className="flex-1 flex items-center justify-center relative z-10 p-2">
-        <div
-          ref={gridRef}
-          className="relative bg-black/30 rounded-xl p-2 backdrop-blur-sm"
-          style={{
-            width: gridSize + 16,
-            height: gridSize + 16,
-          }}
-        >
-          {/* Grid cells - Photo is HIDDEN during gameplay */}
-          <div
-            className="relative grid gap-0.5"
-            style={{
-              width: gridSize,
-              height: gridSize,
-              gridTemplateColumns: `repeat(${GRID_SIZE}, 1fr)`,
-            }}
-          >
-            {grid.map((row, rowIndex) =>
-              row.map((cell, colIndex) => {
-                const isRevealed = isCellRevealed(rowIndex, colIndex);
-                const isPreview = previewCells.has(`${rowIndex}-${colIndex}`);
-                const previewColor = draggingBlock?.color || '#ffffff';
+        <div className="flex flex-col items-center gap-1">
+          {/* Column indicators (top) */}
+          <div className="flex gap-0.5" style={{ marginLeft: 24 }}>
+            {Array.from({ length: GRID_SIZE }).map((_, col) => (
+              <div
+                key={col}
+                className="flex items-center justify-center text-xs"
+                style={{
+                  width: cellSize - 2,
+                  height: 16,
+                  color: clearedCols.has(col) ? '#fbbf24' : 'rgba(255,255,255,0.2)',
+                }}
+              >
+                {clearedCols.has(col) ? '✓' : '○'}
+              </div>
+            ))}
+          </div>
 
-                // Revealed cells show a golden "cleared" glow instead of the photo
-                // Photo only revealed on victory screen
-                return (
-                  <div
-                    key={`${rowIndex}-${colIndex}`}
-                    className={`relative rounded-sm transition-all duration-200 ${
-                      isRevealed ? 'shadow-inner' : ''
-                    }`}
-                    style={{
-                      width: cellSize - 2,
-                      height: cellSize - 2,
-                      backgroundColor: cell.filled
-                        ? BLOCK_COLORS[cell.colorIndex]
-                        : isRevealed
-                          ? '#2a2a2a' // Dark "cleared" area - photo hidden
-                          : isPreview
-                            ? isValidDrop
-                              ? `${previewColor}60`
-                              : '#ff444460'
-                            : 'rgba(40, 40, 40, 0.95)',
-                      // Add subtle glow effect for revealed cells
-                      boxShadow: isRevealed
-                        ? 'inset 0 0 8px rgba(234, 179, 8, 0.3)'
-                        : 'none',
-                    }}
-                  >
-                    {/* Sparkle indicator for revealed cells */}
-                    {isRevealed && (
+          <div className="flex gap-1">
+            {/* Row indicators (left) */}
+            <div className="flex flex-col gap-0.5">
+              {Array.from({ length: GRID_SIZE }).map((_, row) => (
+                <div
+                  key={row}
+                  className="flex items-center justify-center text-xs"
+                  style={{
+                    width: 16,
+                    height: cellSize - 2,
+                    color: clearedRows.has(row) ? '#fbbf24' : 'rgba(255,255,255,0.2)',
+                  }}
+                >
+                  {clearedRows.has(row) ? '✓' : '○'}
+                </div>
+              ))}
+            </div>
+
+            {/* Main Grid */}
+            <div
+              ref={gridRef}
+              className="relative bg-black/30 rounded-xl p-2 backdrop-blur-sm"
+              style={{
+                width: gridSize + 16,
+                height: gridSize + 16,
+              }}
+            >
+              {/* Grid cells */}
+              <div
+                className="relative grid gap-0.5"
+                style={{
+                  width: gridSize,
+                  height: gridSize,
+                  gridTemplateColumns: `repeat(${GRID_SIZE}, 1fr)`,
+                }}
+              >
+                {grid.map((row, rowIndex) =>
+                  row.map((cell, colIndex) => {
+                    const isPreview = previewCells.has(`${rowIndex}-${colIndex}`);
+                    const previewColor = draggingBlock?.color || '#ffffff';
+
+                    return (
                       <div
-                        className="absolute inset-0 flex items-center justify-center opacity-20"
-                        style={{ fontSize: cellSize * 0.4 }}
-                      >
-                        ✨
-                      </div>
-                    )}
-                  </div>
-                );
-              })
-            )}
+                        key={`${rowIndex}-${colIndex}`}
+                        className="relative rounded-sm transition-all duration-100"
+                        style={{
+                          width: cellSize - 2,
+                          height: cellSize - 2,
+                          backgroundColor: cell.filled
+                            ? BLOCK_COLORS[cell.colorIndex]
+                            : isPreview
+                              ? isValidDrop
+                                ? `${previewColor}60`
+                                : '#ff444460'
+                              : 'rgba(40, 40, 40, 0.95)',
+                        }}
+                      />
+                    );
+                  })
+                )}
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -441,7 +454,7 @@ export const PhotoBlastGame: React.FC<PhotoBlastGameProps> = ({ onComplete, onRe
 
         {/* Hint text */}
         <p className="text-center text-white/40 text-xs mt-3">
-          Clear all 16 lines to reveal the hidden photo!
+          Clear each row and column at least once to reveal the photo!
         </p>
       </div>
 
