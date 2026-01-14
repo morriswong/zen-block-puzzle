@@ -366,25 +366,7 @@ export const PhotoBlastGame: React.FC<PhotoBlastGameProps> = ({ onComplete, onRe
             height: gridSize + 16,
           }}
         >
-          {/* Photo underneath (revealed parts) */}
-          <div
-            className="absolute rounded-lg overflow-hidden"
-            style={{
-              top: 8,
-              left: 8,
-              width: gridSize,
-              height: gridSize,
-            }}
-          >
-            <img
-              src={imageUrl}
-              alt="Hidden"
-              className="w-full h-full object-cover"
-              style={{ imageRendering: 'auto' }}
-            />
-          </div>
-
-          {/* Grid cells */}
+          {/* Grid cells - Photo is HIDDEN during gameplay */}
           <div
             className="relative grid gap-0.5"
             style={{
@@ -399,24 +381,42 @@ export const PhotoBlastGame: React.FC<PhotoBlastGameProps> = ({ onComplete, onRe
                 const isPreview = previewCells.has(`${rowIndex}-${colIndex}`);
                 const previewColor = draggingBlock?.color || '#ffffff';
 
+                // Revealed cells show a golden "cleared" glow instead of the photo
+                // Photo only revealed on victory screen
                 return (
                   <div
                     key={`${rowIndex}-${colIndex}`}
-                    className="relative rounded-sm transition-colors duration-100"
+                    className={`relative rounded-sm transition-all duration-200 ${
+                      isRevealed ? 'shadow-inner' : ''
+                    }`}
                     style={{
                       width: cellSize - 2,
                       height: cellSize - 2,
                       backgroundColor: cell.filled
                         ? BLOCK_COLORS[cell.colorIndex]
                         : isRevealed
-                          ? 'transparent'
+                          ? '#2a2a2a' // Dark "cleared" area - photo hidden
                           : isPreview
                             ? isValidDrop
                               ? `${previewColor}60`
                               : '#ff444460'
-                            : 'rgba(30, 30, 30, 0.9)',
+                            : 'rgba(40, 40, 40, 0.95)',
+                      // Add subtle glow effect for revealed cells
+                      boxShadow: isRevealed
+                        ? 'inset 0 0 8px rgba(234, 179, 8, 0.3)'
+                        : 'none',
                     }}
-                  />
+                  >
+                    {/* Sparkle indicator for revealed cells */}
+                    {isRevealed && (
+                      <div
+                        className="absolute inset-0 flex items-center justify-center opacity-20"
+                        style={{ fontSize: cellSize * 0.4 }}
+                      >
+                        ✨
+                      </div>
+                    )}
+                  </div>
                 );
               })
             )}
@@ -441,7 +441,7 @@ export const PhotoBlastGame: React.FC<PhotoBlastGameProps> = ({ onComplete, onRe
 
         {/* Hint text */}
         <p className="text-center text-white/40 text-xs mt-3">
-          Drag blocks onto the grid to reveal the photo
+          Clear all 16 lines to reveal the hidden photo!
         </p>
       </div>
 
