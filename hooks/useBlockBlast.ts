@@ -95,9 +95,7 @@ export interface GridCell {
 }
 
 export interface BlockBlastProgress {
-  score: number;
-  linesCleared: number;
-  totalLinesToClear: number;
+  blocksUsed: number;
   isComplete: boolean;
 }
 
@@ -110,8 +108,6 @@ interface UseBlockBlastReturn {
   grid: GridCell[][];
   currentBlocks: (BlockShape | null)[];
   progress: BlockBlastProgress;
-  clearedRows: Set<number>;
-  clearedCols: Set<number>;
   placeBlock: (blockIndex: number, gridRow: number, gridCol: number) => boolean;
   canPlaceBlock: (block: BlockShape, gridRow: number, gridCol: number) => boolean;
   canPlaceAnyBlock: () => boolean;
@@ -201,24 +197,23 @@ export const useBlockBlast = ({
   const [currentBlocks, setCurrentBlocks] = useState<(BlockShape | null)[]>(() =>
     generateBlockSet(createEmptyGrid())
   );
-  const [score, setScore] = useState(0);
-  // Track which lines have EVER been cleared (for photo reveal progress)
-  const [clearedRows, setClearedRows] = useState<Set<number>>(new Set());
-  const [clearedCols, setClearedCols] = useState<Set<number>>(new Set());
+  const [blocksUsed, setBlocksUsed] = useState(0);
   const [hasCompleted, setHasCompleted] = useState(false);
 
-  // Check if all rows and columns have been cleared at least once
-  const isComplete = clearedRows.size === GRID_SIZE && clearedCols.size === GRID_SIZE;
+  // Check if the entire grid is empty (all cells cleared)
+  const isGridEmpty = (g: GridCell[][]): boolean => {
+    return g.every(row => row.every(cell => !cell.filled));
+  };
 
-  // Trigger completion
-  useEffect(() => {
-    if (isComplete && !hasCompleted) {
+  // Trigger completion when board is fully cleared (after placing at least one block)
+  const triggerCompletion = useCallback(() => {
+    if (!hasCompleted) {
       setHasCompleted(true);
       setTimeout(() => {
         onComplete(imageUrl);
       }, 1000);
     }
-  }, [isComplete, hasCompleted, onComplete, imageUrl]);
+  }, [hasCompleted, onComplete, imageUrl]);
 
   // Check if a block can be placed at a position (only checks empty cells - NO revealed area restriction)
   const canPlaceBlock = useCallback((block: BlockShape, gridRow: number, gridCol: number): boolean => {
@@ -262,13 +257,13 @@ export const useBlockBlast = ({
   // Auto-regenerate blocks when stuck (ensures game is always completable)
   useEffect(() => {
     const hasBlocks = currentBlocks.some(b => b !== null);
-    if (hasBlocks && !isComplete) {
+    if (hasBlocks && !hasCompleted) {
       const canPlace = canPlaceAnyBlock();
       if (!canPlace) {
         setCurrentBlocks(generateBlockSet(grid));
       }
     }
-  }, [grid, currentBlocks, isComplete, canPlaceAnyBlock]);
+  }, [grid, currentBlocks, hasCompleted, canPlaceAnyBlock]);
 
   // Place a block on the grid
   const placeBlock = useCallback((blockIndex: number, gridRow: number, gridCol: number): boolean => {
@@ -326,21 +321,17 @@ export const useBlockBlast = ({
           newGrid[r][col] = { filled: false, colorIndex: -1 };
         }
       });
-
-      // Update progress tracking (which lines have ever been cleared)
-      const newClearedRows = new Set(clearedRows);
-      const newClearedCols = new Set(clearedCols);
-      completedRows.forEach(row => newClearedRows.add(row));
-      completedCols.forEach(col => newClearedCols.add(col));
-      setClearedRows(newClearedRows);
-      setClearedCols(newClearedCols);
-
-      const baseScore = totalCleared * 10;
-      const bonus = totalCleared > 1 ? totalCleared * 5 : 0;
-      setScore(prev => prev + baseScore + bonus);
     }
 
+    // Increment blocks used counter
+    setBlocksUsed(prev => prev + 1);
+
     setGrid(newGrid);
+
+    // Check if grid is completely empty after line clearing - game complete!
+    if (totalCleared > 0 && isGridEmpty(newGrid)) {
+      triggerCompletion();
+    }
 
     // Remove used block
     const newBlocks = [...currentBlocks];
@@ -354,32 +345,26 @@ export const useBlockBlast = ({
     }
 
     return true;
-  }, [grid, currentBlocks, canPlaceBlock, clearedRows, clearedCols]);
+  }, [grid, currentBlocks, canPlaceBlock, triggerCompletion]);
 
   // Reset game
   const resetGame = useCallback(() => {
     const emptyGrid = createEmptyGrid();
     setGrid(emptyGrid);
     setCurrentBlocks(generateBlockSet(emptyGrid));
-    setScore(0);
-    setClearedRows(new Set());
-    setClearedCols(new Set());
+    setBlocksUsed(0);
     setHasCompleted(false);
   }, []);
 
   const progress: BlockBlastProgress = useMemo(() => ({
-    score,
-    linesCleared: clearedRows.size + clearedCols.size,
-    totalLinesToClear: GRID_SIZE * 2,
-    isComplete,
-  }), [score, clearedRows.size, clearedCols.size, isComplete]);
+    blocksUsed,
+    isComplete: hasCompleted,
+  }), [blocksUsed, hasCompleted]);
 
   return {
     grid,
     currentBlocks,
     progress,
-    clearedRows,
-    clearedCols,
     placeBlock,
     canPlaceBlock,
     canPlaceAnyBlock,
