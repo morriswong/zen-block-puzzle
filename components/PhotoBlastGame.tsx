@@ -161,6 +161,8 @@ export const PhotoBlastGame: React.FC<PhotoBlastGameProps> = ({ onComplete, onRe
     grid,
     currentBlocks,
     progress,
+    clearedRows,
+    clearedCols,
     placeBlock,
     canPlaceBlock,
     resetGame,
@@ -331,7 +333,7 @@ export const PhotoBlastGame: React.FC<PhotoBlastGameProps> = ({ onComplete, onRe
         {/* Progress */}
         <div className="bg-black/50 text-white px-5 py-2 rounded-full backdrop-blur-md border border-white/10">
           <span className="text-sm font-medium">
-            Blocks: {progress.blocksUsed}
+            {progress.linesCleared}/{progress.totalLinesToClear} Lines
           </span>
         </div>
 
@@ -351,48 +353,102 @@ export const PhotoBlastGame: React.FC<PhotoBlastGameProps> = ({ onComplete, onRe
 
       {/* Game Grid - Centered */}
       <div className="flex-1 flex items-center justify-center relative z-10 p-2">
-        {/* Main Grid */}
-        <div
-          ref={gridRef}
-          className="relative bg-black/30 rounded-xl p-2 backdrop-blur-sm"
-          style={{
-            width: gridSize + 16,
-            height: gridSize + 16,
-          }}
-        >
-          {/* Grid cells */}
-          <div
-            className="relative grid gap-0.5"
-            style={{
-              width: gridSize,
-              height: gridSize,
-              gridTemplateColumns: `repeat(${GRID_SIZE}, 1fr)`,
-            }}
-          >
-            {grid.map((row, rowIndex) =>
-              row.map((cell, colIndex) => {
-                const isPreview = previewCells.has(`${rowIndex}-${colIndex}`);
-                const previewColor = draggingBlock?.color || '#ffffff';
+        <div className="flex flex-col items-center gap-1">
+          {/* Column indicators (top) */}
+          <div className="flex gap-0.5" style={{ marginLeft: 24 }}>
+            {Array.from({ length: GRID_SIZE }).map((_, col) => (
+              <div
+                key={col}
+                className="flex items-center justify-center text-xs"
+                style={{
+                  width: cellSize - 2,
+                  height: 16,
+                  color: clearedCols.has(col) ? '#fbbf24' : 'rgba(255,255,255,0.2)',
+                }}
+              >
+                {clearedCols.has(col) ? '✓' : '○'}
+              </div>
+            ))}
+          </div>
 
-                return (
-                  <div
-                    key={`${rowIndex}-${colIndex}`}
-                    className="relative rounded-sm transition-all duration-100"
-                    style={{
-                      width: cellSize - 2,
-                      height: cellSize - 2,
-                      backgroundColor: cell.filled
-                        ? BLOCK_COLORS[cell.colorIndex]
-                        : isPreview
-                          ? isValidDrop
-                            ? `${previewColor}60`
-                            : '#ff444460'
-                          : 'rgba(40, 40, 40, 0.95)',
-                    }}
-                  />
-                );
-              })
-            )}
+          <div className="flex gap-1">
+            {/* Row indicators (left) */}
+            <div className="flex flex-col gap-0.5">
+              {Array.from({ length: GRID_SIZE }).map((_, row) => (
+                <div
+                  key={row}
+                  className="flex items-center justify-center text-xs"
+                  style={{
+                    width: 16,
+                    height: cellSize - 2,
+                    color: clearedRows.has(row) ? '#fbbf24' : 'rgba(255,255,255,0.2)',
+                  }}
+                >
+                  {clearedRows.has(row) ? '✓' : '○'}
+                </div>
+              ))}
+            </div>
+
+            {/* Main Grid */}
+            <div
+              ref={gridRef}
+              className="relative bg-black/30 rounded-xl p-2 backdrop-blur-sm"
+              style={{
+                width: gridSize + 16,
+                height: gridSize + 16,
+              }}
+            >
+              {/* Grid cells */}
+              <div
+                className="relative grid gap-0.5"
+                style={{
+                  width: gridSize,
+                  height: gridSize,
+                  gridTemplateColumns: `repeat(${GRID_SIZE}, 1fr)`,
+                }}
+              >
+                {grid.map((row, rowIndex) =>
+                  row.map((cell, colIndex) => {
+                    const isPreview = previewCells.has(`${rowIndex}-${colIndex}`);
+                    const previewColor = draggingBlock?.color || '#ffffff';
+                    const actualCellSize = cellSize - 2;
+
+                    // Check if this cell should show the image (row OR column has been cleared)
+                    const isRevealed = clearedRows.has(rowIndex) || clearedCols.has(colIndex);
+
+                    // Determine cell style
+                    let cellStyle: React.CSSProperties = {
+                      width: actualCellSize,
+                      height: actualCellSize,
+                    };
+
+                    if (cell.filled) {
+                      // Player-placed block
+                      cellStyle.backgroundColor = BLOCK_COLORS[cell.colorIndex];
+                    } else if (isRevealed) {
+                      // Revealed cell - show image portion
+                      cellStyle.backgroundImage = `url(${imageUrl})`;
+                      cellStyle.backgroundPosition = `${-colIndex * actualCellSize}px ${-rowIndex * actualCellSize}px`;
+                      cellStyle.backgroundSize = `${actualCellSize * GRID_SIZE}px ${actualCellSize * GRID_SIZE}px`;
+                    } else if (isPreview) {
+                      // Preview overlay
+                      cellStyle.backgroundColor = isValidDrop ? `${previewColor}60` : '#ff444460';
+                    } else {
+                      // Unrevealed empty cell
+                      cellStyle.backgroundColor = 'rgba(40, 40, 40, 0.95)';
+                    }
+
+                    return (
+                      <div
+                        key={`${rowIndex}-${colIndex}`}
+                        className="relative rounded-sm transition-all duration-100"
+                        style={cellStyle}
+                      />
+                    );
+                  })
+                )}
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -414,7 +470,7 @@ export const PhotoBlastGame: React.FC<PhotoBlastGameProps> = ({ onComplete, onRe
 
         {/* Hint text */}
         <p className="text-center text-white/40 text-xs mt-3">
-          Clear all blocks from the board to reveal the photo!
+          Clear all rows or columns to reveal the photo!
         </p>
       </div>
 
