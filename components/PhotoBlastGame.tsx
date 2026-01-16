@@ -29,17 +29,62 @@ interface DraggableBlockProps {
   block: BlockShape | null;
   index: number;
   cellSize: number;
-  onDragStart: (index: number, e: React.MouseEvent | React.TouchEvent) => void;
+  onDragStart: (index: number, clientX: number, clientY: number) => void;
+  onRotate: (index: number) => void;
   isDragging: boolean;
 }
+
+const DRAG_THRESHOLD = 10; // Pixels to move before considering it a drag
 
 const DraggableBlock: React.FC<DraggableBlockProps> = ({
   block,
   index,
   cellSize,
   onDragStart,
+  onRotate,
   isDragging,
 }) => {
+  const startPosRef = useRef<{ x: number; y: number } | null>(null);
+  const hasDraggedRef = useRef(false);
+
+  const handlePointerDown = useCallback((e: React.MouseEvent | React.TouchEvent) => {
+    if (!block) return;
+    e.preventDefault();
+
+    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+
+    startPosRef.current = { x: clientX, y: clientY };
+    hasDraggedRef.current = false;
+  }, [block]);
+
+  const handlePointerMove = useCallback((e: React.MouseEvent | React.TouchEvent) => {
+    if (!startPosRef.current || hasDraggedRef.current) return;
+
+    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+
+    const dx = Math.abs(clientX - startPosRef.current.x);
+    const dy = Math.abs(clientY - startPosRef.current.y);
+
+    if (dx > DRAG_THRESHOLD || dy > DRAG_THRESHOLD) {
+      hasDraggedRef.current = true;
+      onDragStart(index, clientX, clientY);
+    }
+  }, [index, onDragStart]);
+
+  const handlePointerUp = useCallback((e: React.MouseEvent | React.TouchEvent) => {
+    if (!startPosRef.current) return;
+
+    // If we didn't drag, it's a tap - rotate the block
+    if (!hasDraggedRef.current) {
+      onRotate(index);
+    }
+
+    startPosRef.current = null;
+    hasDraggedRef.current = false;
+  }, [index, onRotate]);
+
   if (!block) {
     return (
       <div
@@ -61,8 +106,13 @@ const DraggableBlock: React.FC<DraggableBlockProps> = ({
         ${isDragging ? 'opacity-30 scale-95' : ''}
       `}
       style={{ width: cellSize * 2.5 + 16, height: cellSize * 2.5 + 16 }}
-      onMouseDown={(e) => onDragStart(index, e)}
-      onTouchStart={(e) => onDragStart(index, e)}
+      onMouseDown={handlePointerDown}
+      onMouseMove={handlePointerMove}
+      onMouseUp={handlePointerUp}
+      onMouseLeave={handlePointerUp}
+      onTouchStart={handlePointerDown}
+      onTouchMove={handlePointerMove}
+      onTouchEnd={handlePointerUp}
     >
       <div className="flex flex-col gap-0.5 pointer-events-none">
         {pattern.map((row, r) => (
@@ -70,7 +120,7 @@ const DraggableBlock: React.FC<DraggableBlockProps> = ({
             {row.map((cell, c) => (
               <div
                 key={c}
-                className="rounded-sm"
+                className="rounded-sm transition-all duration-150"
                 style={{
                   width: previewCellSize,
                   height: previewCellSize,
@@ -165,6 +215,7 @@ export const PhotoBlastGame: React.FC<PhotoBlastGameProps> = ({ onComplete, onRe
     clearedCols,
     placeBlock,
     canPlaceBlock,
+    rotateBlock,
     resetGame,
   } = useBlockBlast({
     onComplete,
@@ -206,14 +257,9 @@ export const PhotoBlastGame: React.FC<PhotoBlastGameProps> = ({ onComplete, onRe
     return null;
   }, [cellSize, draggingIndex, currentBlocks]);
 
-  // Handle drag start
-  const handleDragStart = useCallback((index: number, e: React.MouseEvent | React.TouchEvent) => {
+  // Handle drag start (called from DraggableBlock when drag threshold is exceeded)
+  const handleDragStart = useCallback((index: number, clientX: number, clientY: number) => {
     if (!currentBlocks[index]) return;
-
-    e.preventDefault();
-
-    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
-    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
 
     setDraggingIndex(index);
     setDragPosition({ x: clientX, y: clientY });
@@ -463,6 +509,7 @@ export const PhotoBlastGame: React.FC<PhotoBlastGameProps> = ({ onComplete, onRe
               index={index}
               cellSize={cellSize}
               onDragStart={handleDragStart}
+              onRotate={rotateBlock}
               isDragging={draggingIndex === index}
             />
           ))}

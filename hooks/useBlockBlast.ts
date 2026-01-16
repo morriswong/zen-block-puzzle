@@ -115,12 +115,30 @@ interface UseBlockBlastReturn {
   placeBlock: (blockIndex: number, gridRow: number, gridCol: number) => boolean;
   canPlaceBlock: (block: BlockShape, gridRow: number, gridCol: number) => boolean;
   canPlaceAnyBlock: () => boolean;
+  rotateBlock: (blockIndex: number) => void;
   resetGame: () => void;
 }
 
 // Generate random color index
 const getRandomColorIndex = (): number => {
   return Math.floor(Math.random() * BLOCK_COLORS.length);
+};
+
+// Rotate a pattern 90 degrees clockwise
+const rotatePatternClockwise = (pattern: number[][]): number[][] => {
+  const rows = pattern.length;
+  const cols = pattern[0].length;
+  const rotated: number[][] = [];
+
+  for (let c = 0; c < cols; c++) {
+    const newRow: number[] = [];
+    for (let r = rows - 1; r >= 0; r--) {
+      newRow.push(pattern[r][c]);
+    }
+    rotated.push(newRow);
+  }
+
+  return rotated;
 };
 
 // Check if a specific block can be placed anywhere on a grid (only checks empty cells)
@@ -259,6 +277,21 @@ export const useBlockBlast = ({
     return false;
   }, [currentBlocks, grid]);
 
+  // Rotate a block 90 degrees clockwise
+  const rotateBlock = useCallback((blockIndex: number) => {
+    setCurrentBlocks(prev => {
+      const newBlocks = [...prev];
+      const block = newBlocks[blockIndex];
+      if (block) {
+        newBlocks[blockIndex] = {
+          ...block,
+          pattern: rotatePatternClockwise(block.pattern),
+        };
+      }
+      return newBlocks;
+    });
+  }, []);
+
   // Auto-regenerate blocks when stuck (ensures game is always completable)
   useEffect(() => {
     const hasBlocks = currentBlocks.some(b => b !== null);
@@ -383,6 +416,7 @@ export const useBlockBlast = ({
     placeBlock,
     canPlaceBlock,
     canPlaceAnyBlock,
+    rotateBlock,
     resetGame,
   };
 };
