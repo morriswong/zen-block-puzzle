@@ -9,6 +9,7 @@ interface GameProps {
   onComplete: (imageUrl: string) => void;
   onRestart: () => void;
   onHome: () => void;
+  customImageUrl?: string | null;
 }
 
 // Check if a position is adjacent to the empty tile
@@ -42,8 +43,8 @@ const calculateTileSize = (): number => {
   return Math.min(tileSize, 200);
 };
 
-export const Game: React.FC<GameProps> = ({ onComplete, onRestart, onHome }) => {
-  const imageUrl = useMemo(() => getImageUrl(), []);
+export const Game: React.FC<GameProps> = ({ onComplete, onRestart, onHome, customImageUrl }) => {
+  const imageUrl = useMemo(() => customImageUrl || getImageUrl(), [customImageUrl]);
   const [tileSize, setTileSize] = useState(() => calculateTileSize());
 
   // Update tile size on window resize

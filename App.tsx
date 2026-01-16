@@ -13,9 +13,11 @@ const App: React.FC = () => {
   const [currentGame, setCurrentGame] = useState<GameType>('block-puzzle');
   const [gameKey, setGameKey] = useState(0); // Key to force new game on restart
   const [completedImageUrl, setCompletedImageUrl] = useState<string>('');
+  const [customImageUrl, setCustomImageUrl] = useState<string | null>(null);
 
-  const handleSelectGame = (game: GameType) => {
+  const handleSelectGame = (game: GameType, imageUrl?: string) => {
     setCurrentGame(game);
+    setCustomImageUrl(imageUrl || null);
     setGameKey(prev => prev + 1);
     setScreen('game');
   };
@@ -39,7 +41,7 @@ const App: React.FC = () => {
       )}
 
       {screen === 'game' && currentGame === 'block-puzzle' && (
-        <Game key={gameKey} onComplete={handleGameComplete} onRestart={handleNewGame} onHome={() => setScreen('start')} />
+        <Game key={gameKey} onComplete={handleGameComplete} onRestart={handleNewGame} onHome={() => setScreen('start')} customImageUrl={customImageUrl} />
       )}
 
       {screen === 'game' && currentGame === 'sudoku' && (
