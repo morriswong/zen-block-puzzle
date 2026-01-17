@@ -85,6 +85,12 @@ const DraggableBlock: React.FC<DraggableBlockProps> = ({
     hasDraggedRef.current = false;
   }, [index, onRotate]);
 
+  // Cancel interaction without triggering rotation (for mouse leave, touch cancel)
+  const handlePointerCancel = useCallback(() => {
+    startPosRef.current = null;
+    hasDraggedRef.current = false;
+  }, []);
+
   if (!block) {
     return (
       <div
@@ -109,10 +115,11 @@ const DraggableBlock: React.FC<DraggableBlockProps> = ({
       onMouseDown={handlePointerDown}
       onMouseMove={handlePointerMove}
       onMouseUp={handlePointerUp}
-      onMouseLeave={handlePointerUp}
+      onMouseLeave={handlePointerCancel}
       onTouchStart={handlePointerDown}
       onTouchMove={handlePointerMove}
       onTouchEnd={handlePointerUp}
+      onTouchCancel={handlePointerCancel}
     >
       <div className="flex flex-col gap-0.5 pointer-events-none">
         {pattern.map((row, r) => (
