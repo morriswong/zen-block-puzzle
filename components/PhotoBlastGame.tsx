@@ -524,7 +524,7 @@ export const PhotoBlastGame: React.FC<PhotoBlastGameProps> = ({ onComplete, onRe
 
         {/* Hint text */}
         <p className="text-center text-white/40 text-xs mt-3">
-          Clear all rows or columns to reveal the photo!
+          Tap to rotate, drag to place. Clear all rows and columns to reveal the photo!
         </p>
       </div>
 
