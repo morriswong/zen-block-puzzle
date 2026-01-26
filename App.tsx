@@ -3,9 +3,10 @@ import { StartScreen } from './components/StartScreen';
 import { Game } from './components/Game';
 import { SudokuGame } from './components/SudokuGame';
 import { PhotoBlastGame } from './components/PhotoBlastGame';
+import { PhotoGuessingGame } from './components/PhotoGuessingGame';
 import { EndScreen } from './components/EndScreen';
 
-type GameType = 'block-puzzle' | 'sudoku' | 'photo-blast';
+type GameType = 'block-puzzle' | 'sudoku' | 'photo-blast' | 'photo-guess';
 type ScreenState = 'start' | 'game' | 'end';
 
 const App: React.FC = () => {
@@ -50,6 +51,10 @@ const App: React.FC = () => {
 
       {screen === 'game' && currentGame === 'photo-blast' && (
         <PhotoBlastGame key={gameKey} onComplete={handleGameComplete} onRestart={handleNewGame} onHome={() => setScreen('start')} />
+      )}
+
+      {screen === 'game' && currentGame === 'photo-guess' && (
+        <PhotoGuessingGame key={gameKey} onComplete={handleGameComplete} onRestart={handleNewGame} onHome={() => setScreen('start')} />
       )}
 
       {screen === 'end' && (

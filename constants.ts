@@ -17,3 +17,24 @@ export const SOLVED_STATE = [0, 1, 2, 3, 4, 5, 6, 7, 8];
 
 // Empty tile is represented by this value
 export const EMPTY_TILE = 8;
+
+// Food categories for photo guessing game
+export const FOOD_CATEGORIES = [
+  'burger',
+  'pizza',
+  'fried chicken',
+  'tacos',
+  'sushi',
+  'pasta',
+  'ramen',
+  'ice cream',
+  'donuts',
+  'hot dog',
+  'sandwich',
+  'salad',
+  'steak',
+  'curry',
+  'dim sum',
+] as const;
+
+export type FoodCategory = typeof FOOD_CATEGORIES[number];

@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react';
 import { getImageUrl } from '../constants';
 import { ComingSoonModal } from './ComingSoonModal';
 
-type GameType = 'block-puzzle' | 'sudoku' | 'photo-blast';
+type GameType = 'block-puzzle' | 'sudoku' | 'photo-blast' | 'photo-guess';
 
 interface StartScreenProps {
   onSelectGame: (game: GameType, imageUrl?: string) => void;
@@ -29,6 +29,7 @@ const GAMES: GameDef[] = [
   { id: 'block-puzzle', name: '8 Puzzle', icon: '🧩', gameType: 'block-puzzle', active: true, color: 'from-emerald-500 to-teal-600' },
   { id: 'sudoku', name: 'Sudoku', icon: '🔢', gameType: 'sudoku', active: true, color: 'from-blue-500 to-indigo-600' },
   { id: 'photo-blast', name: 'Blast', icon: '💥', gameType: 'photo-blast', active: true, color: 'from-orange-500 to-red-600' },
+  { id: 'photo-guess', name: 'Guess', icon: '🍔', gameType: 'photo-guess', active: true, color: 'from-purple-500 to-pink-600' },
   { id: 'shapes', name: 'Shapes', icon: '◇', active: false, color: 'from-amber-500 to-orange-600' },
   { id: 'word-search', name: 'Words', icon: '🔤', active: false, color: 'from-rose-500 to-pink-600' },
   { id: 'crossover', name: 'Cross', icon: '➕', active: false, color: 'from-cyan-500 to-blue-600' },

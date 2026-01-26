@@ -9,3 +9,10 @@ export interface GameProgress {
   moves: number;
   isSolved: boolean;
 }
+
+// Photo Guessing Game Types
+export interface PhotoGuessingProgress {
+  attemptsRemaining: number;
+  currentZoomLevel: number;
+  isComplete: boolean;
+}
