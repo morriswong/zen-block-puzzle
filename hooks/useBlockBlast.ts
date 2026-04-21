@@ -36,14 +36,14 @@ const WEIGHTED_SHAPES: WeightedShape[] = [
   { id: 'h4', pattern: [[1, 1, 1, 1]], weight: 8 },
   { id: 'v4', pattern: [[1], [1], [1], [1]], weight: 8 },
 
-  // O-piece — Tetris O (2×2 square)
-  { id: 'square2', pattern: [[1, 1], [1, 1]], weight: 8 },
+  // O-piece — Tetris O (2×2 square, 1 rotation → weight 16 to match other types)
+  { id: 'square2', pattern: [[1, 1], [1, 1]], weight: 16 },
 
-  // T-piece — Tetris T (4 rotations)
-  { id: 'T1', pattern: [[1, 1, 1], [0, 1, 0]], weight: 8 },
-  { id: 'T2', pattern: [[0, 1, 0], [1, 1, 1]], weight: 8 },
-  { id: 'T3', pattern: [[1, 0], [1, 1], [1, 0]], weight: 8 },
-  { id: 'T4', pattern: [[0, 1], [1, 1], [0, 1]], weight: 8 },
+  // T-piece — Tetris T (4 rotations → weight 4 each to keep total 16)
+  { id: 'T1', pattern: [[1, 1, 1], [0, 1, 0]], weight: 4 },
+  { id: 'T2', pattern: [[0, 1, 0], [1, 1, 1]], weight: 4 },
+  { id: 'T3', pattern: [[1, 0], [1, 1], [1, 0]], weight: 4 },
+  { id: 'T4', pattern: [[0, 1], [1, 1], [0, 1]], weight: 4 },
 
   // S-piece — Tetris S (2 rotations)
   { id: 'S1', pattern: [[0, 1, 1], [1, 1, 0]], weight: 8 },
