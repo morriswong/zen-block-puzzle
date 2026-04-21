@@ -14,48 +14,50 @@ interface WeightedShape {
   weight: number;
 }
 
-// All available block shapes with weights for balanced gameplay
+// All available block shapes with weights — Tetris-inspired distribution.
+// 4-cell tetrominoes are dominant (~80%), 3-cell triominoes moderate (~16%),
+// 2-cell dominoes rare (~4%). Single blocks removed from pool (fallback only).
 const WEIGHTED_SHAPES: WeightedShape[] = [
-  // Single blocks (very common) - guaranteed to always fit if there's any empty cell
-  { id: 'single', pattern: [[1]], weight: 15 },
+  // 2-cell dominoes (rare filler)
+  { id: 'h2', pattern: [[1, 1]], weight: 3 },
+  { id: 'v2', pattern: [[1], [1]], weight: 3 },
 
-  // Line shapes (2) - common
-  { id: 'h2', pattern: [[1, 1]], weight: 10 },
-  { id: 'v2', pattern: [[1], [1]], weight: 10 },
+  // 3-cell straight triominoes
+  { id: 'h3', pattern: [[1, 1, 1]], weight: 4 },
+  { id: 'v3', pattern: [[1], [1], [1]], weight: 4 },
 
-  // Line shapes (3) - common
-  { id: 'h3', pattern: [[1, 1, 1]], weight: 8 },
-  { id: 'v3', pattern: [[1], [1], [1]], weight: 8 },
+  // 3-cell L-triominoes
+  { id: 'smallL1', pattern: [[1, 0], [1, 1]], weight: 4 },
+  { id: 'smallL2', pattern: [[0, 1], [1, 1]], weight: 4 },
+  { id: 'smallL3', pattern: [[1, 1], [1, 0]], weight: 4 },
+  { id: 'smallL4', pattern: [[1, 1], [0, 1]], weight: 4 },
 
-  // Line shapes (4) - less common
-  { id: 'h4', pattern: [[1, 1, 1, 1]], weight: 4 },
-  { id: 'v4', pattern: [[1], [1], [1], [1]], weight: 4 },
+  // I-piece — Tetris I (4-cell straight)
+  { id: 'h4', pattern: [[1, 1, 1, 1]], weight: 8 },
+  { id: 'v4', pattern: [[1], [1], [1], [1]], weight: 8 },
 
-  // Line shapes (5) - rare
-  { id: 'h5', pattern: [[1, 1, 1, 1, 1]], weight: 2 },
-  { id: 'v5', pattern: [[1], [1], [1], [1], [1]], weight: 2 },
+  // O-piece — Tetris O (2×2 square)
+  { id: 'square2', pattern: [[1, 1], [1, 1]], weight: 8 },
 
-  // Square shapes
-  { id: 'square2', pattern: [[1, 1], [1, 1]], weight: 6 },
-  { id: 'square3', pattern: [[1, 1, 1], [1, 1, 1], [1, 1, 1]], weight: 1 },
+  // T-piece — Tetris T (4 rotations)
+  { id: 'T1', pattern: [[1, 1, 1], [0, 1, 0]], weight: 8 },
+  { id: 'T2', pattern: [[0, 1, 0], [1, 1, 1]], weight: 8 },
+  { id: 'T3', pattern: [[1, 0], [1, 1], [1, 0]], weight: 8 },
+  { id: 'T4', pattern: [[0, 1], [1, 1], [0, 1]], weight: 8 },
 
-  // Small L shapes - common
-  { id: 'smallL1', pattern: [[1, 0], [1, 1]], weight: 8 },
-  { id: 'smallL2', pattern: [[0, 1], [1, 1]], weight: 8 },
-  { id: 'smallL3', pattern: [[1, 1], [1, 0]], weight: 8 },
-  { id: 'smallL4', pattern: [[1, 1], [0, 1]], weight: 8 },
+  // S-piece — Tetris S (2 rotations)
+  { id: 'S1', pattern: [[0, 1, 1], [1, 1, 0]], weight: 8 },
+  { id: 'S2', pattern: [[1, 0], [1, 1], [0, 1]], weight: 8 },
 
-  // L shapes - less common
-  { id: 'L1', pattern: [[1, 0], [1, 0], [1, 1]], weight: 3 },
-  { id: 'L2', pattern: [[0, 1], [0, 1], [1, 1]], weight: 3 },
-  { id: 'L3', pattern: [[1, 1], [1, 0], [1, 0]], weight: 3 },
-  { id: 'L4', pattern: [[1, 1], [0, 1], [0, 1]], weight: 3 },
+  // Z-piece — Tetris Z (2 rotations)
+  { id: 'Z1', pattern: [[1, 1, 0], [0, 1, 1]], weight: 8 },
+  { id: 'Z2', pattern: [[0, 1], [1, 1], [1, 0]], weight: 8 },
 
-  // T shapes - less common
-  { id: 'T1', pattern: [[1, 1, 1], [0, 1, 0]], weight: 3 },
-  { id: 'T2', pattern: [[0, 1, 0], [1, 1, 1]], weight: 3 },
-  { id: 'T3', pattern: [[1, 0], [1, 1], [1, 0]], weight: 3 },
-  { id: 'T4', pattern: [[0, 1], [1, 1], [0, 1]], weight: 3 },
+  // J/L-piece — Tetris J and L (4 rotations)
+  { id: 'L1', pattern: [[1, 0], [1, 0], [1, 1]], weight: 8 },
+  { id: 'L2', pattern: [[0, 1], [0, 1], [1, 1]], weight: 8 },
+  { id: 'L3', pattern: [[1, 1], [1, 0], [1, 0]], weight: 8 },
+  { id: 'L4', pattern: [[1, 1], [0, 1], [0, 1]], weight: 8 },
 ];
 
 // Build weighted selection array
