@@ -347,6 +347,7 @@ export const useBlockBlast = ({
           ...block,
           pattern: rotatePatternClockwise(block.pattern),
         };
+        navigator.vibrate?.(20);
       }
       return newBlocks;
     });
@@ -371,6 +372,8 @@ export const useBlockBlast = ({
     if (!canPlaceBlock(block, gridRow, gridCol)) {
       return false;
     }
+
+    navigator.vibrate?.(25);
 
     const pattern = block.pattern;
     const colorIndex = BLOCK_COLORS.indexOf(block.color);
@@ -410,6 +413,7 @@ export const useBlockBlast = ({
     const newClearedCols = new Set(clearedCols);
 
     if (totalCleared > 0) {
+      navigator.vibrate?.([0, 40, 30, 40]);
       // Clear the completed lines
       completedRows.forEach(row => {
         for (let c = 0; c < GRID_SIZE; c++) {

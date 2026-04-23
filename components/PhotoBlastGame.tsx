@@ -275,6 +275,7 @@ export const PhotoBlastGame: React.FC<PhotoBlastGameProps> = ({ onComplete, onRe
   const handleDragStart = useCallback((index: number, clientX: number, clientY: number) => {
     if (!currentBlocks[index]) return;
 
+    navigator.vibrate?.(15);
     setDraggingIndex(index);
     setDragPosition({ x: clientX, y: clientY });
   }, [currentBlocks]);
