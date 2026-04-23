@@ -174,10 +174,64 @@ const canPlaceBlockAnywhere = (
   return false;
 };
 
-// Generate a random block that can fit on the grid
-const generateFittingBlock = (grid: GridCell[][]): BlockShape => {
+// Check if a block can be placed somewhere that lands only on unrevealed (dark) cells
+const canPlaceBlockInUnrevealed = (
+  block: { pattern: number[][] },
+  grid: GridCell[][],
+  clearedRows: Set<number>,
+  clearedCols: Set<number>
+): boolean => {
+  const pattern = block.pattern;
+  const rows = pattern.length;
+  const cols = pattern[0].length;
+
+  for (let gridRow = 0; gridRow <= GRID_SIZE - rows; gridRow++) {
+    for (let gridCol = 0; gridCol <= GRID_SIZE - cols; gridCol++) {
+      let canPlace = true;
+
+      outer: for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+          if (pattern[r][c] === 1) {
+            const absRow = gridRow + r;
+            const absCol = gridCol + c;
+            if (
+              grid[absRow][absCol].filled ||
+              clearedRows.has(absRow) ||
+              clearedCols.has(absCol)
+            ) {
+              canPlace = false;
+              break outer;
+            }
+          }
+        }
+      }
+
+      if (canPlace) return true;
+    }
+  }
+
+  return false;
+};
+
+// Generate a random block that can fit on the grid, preferring unrevealed cells
+const generateFittingBlock = (
+  grid: GridCell[][],
+  clearedRows: Set<number>,
+  clearedCols: Set<number>
+): BlockShape => {
   const shuffled = [...WEIGHTED_BLOCK_ARRAY].sort(() => Math.random() - 0.5);
 
+  // Pass 1: prefer blocks that fit entirely in the unrevealed (dark) area
+  for (const shape of shuffled) {
+    if (canPlaceBlockInUnrevealed(shape, grid, clearedRows, clearedCols)) {
+      return {
+        ...shape,
+        color: BLOCK_COLORS[getRandomColorIndex()],
+      };
+    }
+  }
+
+  // Pass 2: fallback to any empty cell so the player always gets a usable piece
   for (const shape of shuffled) {
     if (canPlaceBlockAnywhere(shape, grid)) {
       return {
@@ -187,7 +241,7 @@ const generateFittingBlock = (grid: GridCell[][]): BlockShape => {
     }
   }
 
-  // Fallback to single block
+  // Last resort: single block
   return {
     ...SINGLE_BLOCK,
     color: BLOCK_COLORS[getRandomColorIndex()],
@@ -195,11 +249,15 @@ const generateFittingBlock = (grid: GridCell[][]): BlockShape => {
 };
 
 // Generate 3 random blocks that can fit
-const generateBlockSet = (grid: GridCell[][]): BlockShape[] => {
+const generateBlockSet = (
+  grid: GridCell[][],
+  clearedRows: Set<number>,
+  clearedCols: Set<number>
+): BlockShape[] => {
   return [
-    generateFittingBlock(grid),
-    generateFittingBlock(grid),
-    generateFittingBlock(grid),
+    generateFittingBlock(grid, clearedRows, clearedCols),
+    generateFittingBlock(grid, clearedRows, clearedCols),
+    generateFittingBlock(grid, clearedRows, clearedCols),
   ];
 };
 
@@ -219,7 +277,7 @@ export const useBlockBlast = ({
 }: UseBlockBlastProps): UseBlockBlastReturn => {
   const [grid, setGrid] = useState<GridCell[][]>(() => createEmptyGrid());
   const [currentBlocks, setCurrentBlocks] = useState<(BlockShape | null)[]>(() =>
-    generateBlockSet(createEmptyGrid())
+    generateBlockSet(createEmptyGrid(), new Set(), new Set())
   );
   const [score, setScore] = useState(0);
   // Track which lines have EVER been cleared (for photo reveal progress)
@@ -300,7 +358,7 @@ export const useBlockBlast = ({
     if (hasBlocks && !isComplete) {
       const canPlace = canPlaceAnyBlock();
       if (!canPlace) {
-        setCurrentBlocks(generateBlockSet(grid));
+        setCurrentBlocks(generateBlockSet(grid, clearedRows, clearedCols));
       }
     }
   }, [grid, currentBlocks, isComplete, canPlaceAnyBlock]);
@@ -383,7 +441,7 @@ export const useBlockBlast = ({
 
     // If all blocks used, generate new set
     if (newBlocks.every(b => b === null)) {
-      setCurrentBlocks(generateBlockSet(newGrid));
+      setCurrentBlocks(generateBlockSet(newGrid, newClearedRows, newClearedCols));
     } else {
       setCurrentBlocks(newBlocks);
     }
@@ -395,7 +453,7 @@ export const useBlockBlast = ({
   const resetGame = useCallback(() => {
     const emptyGrid = createEmptyGrid();
     setGrid(emptyGrid);
-    setCurrentBlocks(generateBlockSet(emptyGrid));
+    setCurrentBlocks(generateBlockSet(emptyGrid, new Set(), new Set()));
     setScore(0);
     setClearedRows(new Set());
     setClearedCols(new Set());
