@@ -406,6 +406,9 @@ export const useBlockBlast = ({
 
     const totalCleared = completedRows.length + completedCols.length;
 
+    const newClearedRows = new Set(clearedRows);
+    const newClearedCols = new Set(clearedCols);
+
     if (totalCleared > 0) {
       // Clear the completed lines
       completedRows.forEach(row => {
@@ -421,8 +424,6 @@ export const useBlockBlast = ({
       });
 
       // Update progress tracking (which lines have ever been cleared)
-      const newClearedRows = new Set(clearedRows);
-      const newClearedCols = new Set(clearedCols);
       completedRows.forEach(row => newClearedRows.add(row));
       completedCols.forEach(col => newClearedCols.add(col));
       setClearedRows(newClearedRows);
