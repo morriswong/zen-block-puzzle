@@ -1,6 +1,4 @@
-import React, { useState, useRef } from 'react';
-import { getImageUrl } from '../constants';
-import { ComingSoonModal } from './ComingSoonModal';
+import React, { useRef } from 'react';
 
 type GameType = 'block-puzzle' | 'sudoku' | 'photo-blast';
 
@@ -8,61 +6,71 @@ interface StartScreenProps {
   onSelectGame: (game: GameType, imageUrl?: string) => void;
 }
 
-interface GameDef {
-  id: string;
-  name: string;
-  icon: string;
-  gameType?: GameType;
-  active: boolean;
-  color: string;
-}
+const PREVIEW_IMAGE_URL = 'https://picsum.photos/id/1018/192/192';
+const BLOCK_COLORS: Record<number, string> = {
+  1: '#FF6B6B',
+  2: '#4ECDC4',
+  3: '#45B7D1',
+  4: '#96CEB4',
+  5: '#FFEAA7',
+  6: '#DDA0DD',
+};
+const CELL = 24;
 
-interface CollectionDef {
-  id: string;
-  name: string;
-  imageId: number;
-  badge: string;
-  badgeColor: string;
-}
-
-const GAMES: GameDef[] = [
-  { id: 'block-puzzle', name: '8 Puzzle', icon: '🧩', gameType: 'block-puzzle', active: true, color: 'from-emerald-500 to-teal-600' },
-  { id: 'sudoku', name: 'Sudoku', icon: '🔢', gameType: 'sudoku', active: true, color: 'from-blue-500 to-indigo-600' },
-  { id: 'photo-blast', name: 'Blast', icon: '💥', gameType: 'photo-blast', active: true, color: 'from-orange-500 to-red-600' },
-  { id: 'shapes', name: 'Shapes', icon: '◇', active: false, color: 'from-amber-500 to-orange-600' },
-  { id: 'word-search', name: 'Words', icon: '🔤', active: false, color: 'from-rose-500 to-pink-600' },
-  { id: 'crossover', name: 'Cross', icon: '➕', active: false, color: 'from-cyan-500 to-blue-600' },
-  { id: 'keysmash', name: 'Keys', icon: '⌨️', active: false, color: 'from-lime-500 to-green-600' },
-  { id: 'waywords', name: 'Way', icon: '↓', active: false, color: 'from-fuchsia-500 to-purple-600' },
+const PREVIEW_BOARD: (number | 'r')[][] = [
+  ['r', 'r', 'r', 'r', 'r', 'r', 'r', 'r'],
+  ['r', 'r', 'r', 'r', 'r', 'r', 'r', 'r'],
+  [0, 1, 1, 0, 0, 2, 2, 0],
+  [0, 1, 0, 0, 0, 0, 2, 0],
+  [3, 3, 0, 4, 4, 0, 0, 0],
+  [0, 0, 0, 4, 0, 0, 0, 5],
+  [0, 0, 6, 6, 0, 0, 0, 0],
+  [0, 0, 0, 0, 0, 0, 0, 0],
 ];
 
-const COLLECTIONS: CollectionDef[] = [
-  { id: 'nature', name: 'Nature', imageId: 10, badge: '8 Puzzle', badgeColor: 'bg-emerald-500' },
-  { id: 'space', name: 'Space', imageId: 110, badge: 'Jigsaw', badgeColor: 'bg-purple-500' },
-  { id: 'ocean', name: 'Ocean', imageId: 1015, badge: '8 Puzzle', badgeColor: 'bg-emerald-500' },
-  { id: 'cities', name: 'Cities', imageId: 1040, badge: 'Shapes', badgeColor: 'bg-amber-500' },
-  { id: 'art', name: 'Art', imageId: 1050, badge: 'Jigsaw', badgeColor: 'bg-purple-500' },
-  { id: 'animals', name: 'Animals', imageId: 1074, badge: '8 Puzzle', badgeColor: 'bg-emerald-500' },
-];
+const GamePreview: React.FC = () => (
+  <div className="flex flex-col items-center gap-3">
+    <div
+      className="rounded-xl overflow-hidden"
+      style={{
+        display: 'grid',
+        gridTemplateColumns: `repeat(8, ${CELL}px)`,
+        gridTemplateRows: `repeat(8, ${CELL}px)`,
+        gap: '1px',
+        backgroundColor: 'rgba(0,0,0,0.6)',
+      }}
+    >
+      {PREVIEW_BOARD.flatMap((row, rowIdx) =>
+        row.map((cell, colIdx) =>
+          cell === 'r' ? (
+            <div
+              key={`${rowIdx}-${colIdx}`}
+              style={{
+                backgroundImage: `url(${PREVIEW_IMAGE_URL})`,
+                backgroundSize: `${CELL * 8}px ${CELL * 8}px`,
+                backgroundPosition: `-${colIdx * CELL}px -${rowIdx * CELL}px`,
+              }}
+            />
+          ) : (
+            <div
+              key={`${rowIdx}-${colIdx}`}
+              style={{
+                backgroundColor: cell === 0 ? 'rgb(20, 20, 20)' : BLOCK_COLORS[cell as number],
+                borderRadius: cell !== 0 ? '2px' : undefined,
+              }}
+            />
+          )
+        )
+      )}
+    </div>
+    <span className="bg-amber-400/20 border border-amber-400/30 text-amber-400 text-xs font-semibold px-3 py-1 rounded-full">
+      2 / 8 Lines
+    </span>
+  </div>
+);
 
 export const StartScreen: React.FC<StartScreenProps> = ({ onSelectGame }) => {
-  const [modalOpen, setModalOpen] = useState(false);
-  const [selectedGame, setSelectedGame] = useState<{ name: string; icon: string } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const handleGameClick = (game: GameDef) => {
-    if (game.active && game.gameType) {
-      onSelectGame(game.gameType);
-    } else {
-      setSelectedGame({ name: game.name, icon: game.icon });
-      setModalOpen(true);
-    }
-  };
-
-  const handleCollectionClick = (collection: CollectionDef) => {
-    setSelectedGame({ name: collection.name + ' Collection', icon: '📚' });
-    setModalOpen(true);
-  };
 
   const handlePhotoUpload = () => {
     fileInputRef.current?.click();
@@ -72,43 +80,33 @@ export const StartScreen: React.FC<StartScreenProps> = ({ onSelectGame }) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    // Create a canvas to crop the image to a square
     const reader = new FileReader();
     reader.onload = (e) => {
       const img = new Image();
       img.onload = () => {
         const canvas = document.createElement('canvas');
-        const size = 600; // Match the puzzle image size
+        const size = 600;
         canvas.width = size;
         canvas.height = size;
         const ctx = canvas.getContext('2d');
         if (!ctx) return;
 
-        // Calculate crop to center square
         const minDim = Math.min(img.width, img.height);
         const sx = (img.width - minDim) / 2;
         const sy = (img.height - minDim) / 2;
-
-        // Draw cropped and scaled image
         ctx.drawImage(img, sx, sy, minDim, minDim, 0, 0, size, size);
 
-        // Convert to data URL and start game
         const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
-        onSelectGame('block-puzzle', dataUrl);
+        onSelectGame('photo-blast', dataUrl);
       };
       img.src = e.target?.result as string;
     };
     reader.readAsDataURL(file);
-
-    // Reset input so same file can be selected again
     event.target.value = '';
   };
 
-  const heroImageUrl = `https://picsum.photos/id/1018/800/400`;
-
   return (
-    <div className="absolute inset-0 flex flex-col bg-gray-950 z-50 overflow-y-auto">
-      {/* Hidden file input for photo upload */}
+    <div className="absolute inset-0 flex flex-col items-center bg-gray-950 z-50 overflow-y-auto">
       <input
         ref={fileInputRef}
         type="file"
@@ -118,117 +116,47 @@ export const StartScreen: React.FC<StartScreenProps> = ({ onSelectGame }) => {
       />
 
       {/* Header */}
-      <div className="text-center pt-8 pb-4 flex-shrink-0">
-        <div className="flex items-center justify-center gap-1 mb-1">
-          <span className="text-red-500 text-2xl font-light tracking-wide">Zen</span>
-        </div>
-        <h1 className="text-3xl font-black tracking-[0.3em] text-white uppercase">
-          Puzzles
-        </h1>
-      </div>
-
-      {/* Hero Banner */}
-      <div className="mx-4 rounded-2xl overflow-hidden relative flex-shrink-0">
-        <img
-          src={heroImageUrl}
-          alt="Featured Puzzle"
-          className="w-full aspect-video object-cover"
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent" />
-        <div className="absolute inset-0 bg-gradient-to-r from-red-900/30 to-transparent" />
-        <div className="absolute bottom-0 left-0 right-0 p-4 text-center">
-          <p className="text-white/60 text-xs uppercase tracking-widest mb-1">8 Puzzle</p>
-          <h2 className="text-white text-xl font-bold mb-3">Create Your Own</h2>
-          <div className="flex gap-3 justify-center">
-            <button
-              onClick={handlePhotoUpload}
-              className="px-6 py-2 bg-gradient-to-r from-pink-500 to-rose-500 text-white font-semibold rounded-full hover:from-pink-600 hover:to-rose-600 transition-all text-sm shadow-lg shadow-pink-500/25"
-            >
-              Use Your Photo
-            </button>
-            <button
-              onClick={() => onSelectGame('block-puzzle')}
-              className="px-6 py-2 bg-white/20 backdrop-blur-sm text-white font-semibold rounded-full hover:bg-white/30 transition-colors text-sm border border-white/20"
-            >
-              Random
-            </button>
-          </div>
+      <div className="text-center pt-12 pb-2 flex-shrink-0">
+        <p className="text-white/30 text-xs tracking-[0.3em] uppercase mb-3">Zen Puzzles</p>
+        <div className="flex items-center justify-center gap-3">
+          <span className="text-4xl leading-none">💥</span>
+          <h1 className="text-5xl font-black tracking-[0.2em] text-white uppercase leading-none">
+            BLAST
+          </h1>
         </div>
       </div>
 
-      {/* Daily Puzzles Section */}
-      <section className="px-4 mt-6 flex-shrink-0">
-        <h2 className="text-white/80 text-lg font-semibold mb-3">Daily Puzzles</h2>
-        <div className="grid grid-cols-4 gap-3">
-          {GAMES.map((game) => (
-            <button
-              key={game.id}
-              onClick={() => handleGameClick(game)}
-              className={`
-                flex flex-col items-center justify-center p-3 rounded-xl
-                bg-gray-800/80 border border-white/5
-                transition-all duration-200
-                ${game.active
-                  ? 'hover:bg-gray-700 hover:scale-105 hover:border-white/20'
-                  : 'opacity-40 grayscale'
-                }
-              `}
-            >
-              <div
-                className={`
-                  w-12 h-12 rounded-xl flex items-center justify-center text-2xl mb-2
-                  ${game.active ? `bg-gradient-to-br ${game.color}` : 'bg-gray-700'}
-                `}
-              >
-                {game.icon}
-              </div>
-              <span className="text-white/80 text-xs font-medium">{game.name}</span>
-            </button>
-          ))}
-        </div>
-      </section>
+      {/* Game Preview */}
+      <div className="mt-8 flex-shrink-0">
+        <GamePreview />
+      </div>
 
-      {/* Collections Section */}
-      <section className="mt-6 pb-8 flex-shrink-0">
-        <h2 className="text-white/80 text-lg font-semibold mb-3 px-4">Collections</h2>
-        <div className="flex overflow-x-auto gap-3 px-4 pb-2 scrollbar-hide">
-          {COLLECTIONS.map((collection) => (
-            <button
-              key={collection.id}
-              onClick={() => handleCollectionClick(collection)}
-              className="flex-shrink-0 w-32 rounded-xl overflow-hidden relative group"
-            >
-              <img
-                src={`https://picsum.photos/id/${collection.imageId}/200/300`}
-                alt={collection.name}
-                className="w-full aspect-[2/3] object-cover group-hover:scale-105 transition-transform duration-300"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-              <div className={`absolute top-2 left-2 ${collection.badgeColor} px-2 py-0.5 rounded text-[10px] text-white font-medium`}>
-                {collection.badge}
-              </div>
-              <div className="absolute bottom-0 left-0 right-0 p-2">
-                <p className="text-white text-sm font-semibold">{collection.name}</p>
-              </div>
-            </button>
-          ))}
-        </div>
-      </section>
+      {/* Tagline */}
+      <p className="mt-8 text-white/50 text-sm text-center px-6 flex-shrink-0">
+        Place blocks. Clear lines. Reveal the photo.
+      </p>
+
+      {/* CTA Buttons */}
+      <div className="w-full px-6 mt-8 flex flex-col gap-3 flex-shrink-0">
+        <button
+          onClick={() => onSelectGame('photo-blast')}
+          className="w-full py-4 bg-gradient-to-r from-orange-500 to-red-600 text-white font-bold text-lg rounded-2xl shadow-lg shadow-orange-500/30 hover:from-orange-600 hover:to-red-700 active:scale-95 transition-all"
+        >
+          Play Now
+        </button>
+        <button
+          onClick={handlePhotoUpload}
+          className="w-full py-3 bg-white/10 backdrop-blur-sm text-white font-semibold rounded-2xl border border-white/20 hover:bg-white/20 active:scale-95 transition-all flex items-center justify-center gap-2"
+        >
+          <span>📷</span>
+          <span>Upload Your Photo</span>
+        </button>
+      </div>
 
       {/* Footer */}
-      <div className="mt-auto py-4 text-center flex-shrink-0">
-        <p className="text-white/20 text-xs tracking-[0.2em] uppercase">
-          Prototype v1.0
-        </p>
+      <div className="mt-auto py-6 flex-shrink-0">
+        <p className="text-white/20 text-xs tracking-[0.2em] uppercase">Prototype v1.0</p>
       </div>
-
-      {/* Coming Soon Modal */}
-      <ComingSoonModal
-        isOpen={modalOpen}
-        onClose={() => setModalOpen(false)}
-        gameName={selectedGame?.name || ''}
-        icon={selectedGame?.icon}
-      />
     </div>
   );
 };
